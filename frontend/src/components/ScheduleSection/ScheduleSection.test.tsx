@@ -1,5 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
+import { render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ScheduleSection } from './ScheduleSection'
 import type { PublicMatch } from '../../api/public'
@@ -8,34 +7,24 @@ vi.mock('../../api/public', () => ({
   fetchMatches: vi.fn(),
 }))
 
+// Stub the React Flow canvas — this test only covers the section's load/empty/
+// error wiring. The diagram itself is tested in ScheduleFlow.test.tsx.
+vi.mock('./ScheduleFlow', () => ({
+  ScheduleFlow: ({ matches }: { matches: PublicMatch[] }) => (
+    <div data-testid="flow">{matches.length} matches</div>
+  ),
+}))
+
 import { fetchMatches } from '../../api/public'
 const mockFetch = vi.mocked(fetchMatches)
 
-const scheduled: PublicMatch = {
-  id: 1,
-  team_a: { id: 1, name: 'Spin Doctors' },
-  team_b: { id: 2, name: 'Paddle Battle' },
-  status: 'scheduled',
-  result: null,
-  games: [],
-}
-
 const played: PublicMatch = {
-  id: 2,
+  id: 1,
   team_a: { id: 1, name: 'Net Ninjas' },
-  team_b: { id: 3, name: 'Table Titans' },
+  team_b: { id: 2, name: 'Table Titans' },
   status: 'completed',
   result: { winner: 'a', games_won_a: 2, games_won_b: 1 },
-  games: [
-    {
-      member_a_id: 3,
-      member_a_name: 'Ada',
-      member_b_id: 8,
-      member_b_name: 'Finn',
-      team_a_score: 11,
-      team_b_score: 7,
-    },
-  ],
+  games: [],
 }
 
 afterEach(() => {
@@ -43,55 +32,27 @@ afterEach(() => {
 })
 
 describe('ScheduleSection', () => {
-  it('splits matches into to-play and played groups, each once', async () => {
-    mockFetch.mockResolvedValue([scheduled, played])
-    render(<ScheduleSection />)
-
-    await waitFor(() =>
-      expect(screen.getByRole('heading', { name: 'To play' })).toBeInTheDocument(),
-    )
-    // Both team pairings appear exactly once (team name shares a span with "vs").
-    expect(screen.getAllByText(/spin doctors/i)).toHaveLength(1)
-    expect(screen.getAllByText(/net ninjas/i)).toHaveLength(1)
-    // The played match shows its games-won score.
-    expect(screen.getByText('2–1')).toBeInTheDocument()
-    // The scheduled match has no result, just a "Scheduled" marker.
-    expect(screen.getByText('Scheduled')).toBeInTheDocument()
-  })
-
-  it('expands a played match to its detail on click', async () => {
+  it('renders the flow with the fetched matches when ready', async () => {
     mockFetch.mockResolvedValue([played])
     render(<ScheduleSection />)
-
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: /net ninjas/i })).toBeInTheDocument(),
-    )
-    // Detail hidden until clicked.
-    expect(screen.queryByText('Ada')).not.toBeInTheDocument()
-
-    await userEvent.click(screen.getByRole('button', { name: /net ninjas/i }))
-    expect(screen.getByText('Ada')).toBeInTheDocument()
-    expect(screen.getByText('Finn')).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByTestId('flow')).toBeInTheDocument())
+    expect(screen.getByTestId('flow')).toHaveTextContent('1 matches')
   })
 
-  it('shows per-group empty states', async () => {
-    mockFetch.mockResolvedValue([played]) // no scheduled matches
+  it('shows an empty state when there are no matches', async () => {
+    mockFetch.mockResolvedValue([])
     render(<ScheduleSection />)
     await waitFor(() =>
-      expect(screen.getByText(/no matches scheduled/i)).toBeInTheDocument(),
+      expect(screen.getByText(/no matches scheduled yet/i)).toBeInTheDocument(),
     )
+    expect(screen.queryByTestId('flow')).not.toBeInTheDocument()
   })
 
-  it('shows a draw label on a drawn match', async () => {
-    const draw: PublicMatch = {
-      ...played,
-      id: 5,
-      result: { winner: 'draw', games_won_a: 1, games_won_b: 1 },
-    }
-    mockFetch.mockResolvedValue([draw])
+  it('shows an error state when the fetch fails', async () => {
+    mockFetch.mockRejectedValue(new Error('boom'))
     render(<ScheduleSection />)
-    await waitFor(() => expect(screen.getByText(/draw/i)).toBeInTheDocument())
-    const row = screen.getByRole('button', { name: /net ninjas/i })
-    expect(within(row).getByText(/draw 1–1/i)).toBeInTheDocument()
+    await waitFor(() =>
+      expect(screen.getByText(/couldn’t load the schedule/i)).toBeInTheDocument(),
+    )
   })
 })

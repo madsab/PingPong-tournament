@@ -1,0 +1,37 @@
+/* React Flow fills its parent, so the canvas needs an explicit height. It pans
+   and zooms inside this box rather than growing the page (§9.6 responsive). */
+.canvas {
+  width: 100%;
+  height: min(70vh, 620px);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+/* Tint React Flow's built-in chrome to match the dark arena theme. */
+.canvas :global(.react-flow__background) {
+  background: var(--color-ink);
+}
+
+.canvas :global(.react-flow__controls) {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.canvas :global(.react-flow__controls-button) {
+  background: var(--color-char);
+  border-bottom: 1px solid var(--color-hairline);
+  color: var(--color-text);
+  fill: var(--color-text);
+}
+
+.canvas :global(.react-flow__edge-path) {
+  stroke: var(--color-hairline);
+}
+
+.detailWrap {
+  margin-top: 1rem;
+  background: var(--color-char);
+  border-radius: var(--radius);
+  overflow: hidden;
+}

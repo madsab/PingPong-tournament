@@ -1,0 +1,91 @@
+/* A fixture card node. Width is fixed so React Flow can lay the columns out. */
+.node {
+  width: 190px;
+  background: var(--color-char);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius);
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.node:hover {
+  border-color: var(--color-ember);
+  box-shadow: 0 0 0 1px var(--color-ember);
+}
+
+/* To-play matches read as "outlined / pending" vs the solid played cards. */
+.scheduled {
+  background: transparent;
+  border-style: dashed;
+  cursor: default;
+}
+
+.team {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.25rem 0;
+  color: var(--color-ash);
+}
+
+.team + .team {
+  border-top: 1px solid var(--color-hairline);
+}
+
+.name {
+  font-weight: var(--fw-name);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.score {
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--fw-score);
+  min-width: 1ch;
+  text-align: right;
+}
+
+/* The winning side stands out in heat orange. */
+.winner {
+  color: var(--color-text);
+}
+
+.winner .score {
+  color: var(--color-flame);
+}
+
+.chip {
+  display: inline-block;
+  margin-top: 0.4rem;
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-ash);
+}
+
+/* Round column header */
+.header {
+  width: 190px;
+  text-align: center;
+}
+
+.headerLabel {
+  display: block;
+  font-weight: var(--fw-name);
+  color: var(--color-text);
+}
+
+.headerKind {
+  display: block;
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-flame);
+}
+
+.headerUpcoming .headerKind {
+  color: var(--color-ash);
+}

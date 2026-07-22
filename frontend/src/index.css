@@ -1,10 +1,10 @@
 /* Self-hosted Inter (via @fontsource) — the §9.3 family, weights we actually use. */
-@import '@fontsource/inter/400.css';
-@import '@fontsource/inter/600.css';
-@import '@fontsource/inter/700.css';
-@import '@fontsource/inter/800.css';
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/600.css";
+@import "@fontsource/inter/700.css";
+@import "@fontsource/inter/800.css";
 
-@import './theme/tokens.css';
+@import "./theme/tokens.css";
 
 :root {
   color-scheme: dark;
