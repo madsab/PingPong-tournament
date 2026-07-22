@@ -3,7 +3,10 @@
 
 // In dev the frontend (5173) and backend (8000) are separate origins. Allow an
 // override so the same code works in Docker; fall back to the local backend.
-const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8000'
+// In production the frontend and API share a domain (Vercel proxies /api to the
+// backend — see frontend/vercel.json), so the base is empty and calls are
+// same-origin. Local dev falls back to the separate backend on :8000.
+const API_BASE = import.meta.env.VITE_API_BASE ?? (import.meta.env.DEV ? 'http://localhost:8000' : '')
 
 // --- Leaderboard (F2) ----------------------------------------------------------
 

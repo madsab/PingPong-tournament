@@ -20,7 +20,9 @@ export interface StandingsResponse {
 
 // In dev the frontend (5173) and backend (8000) are separate origins. Allow an
 // override so the same code works in Docker; fall back to the local backend.
-const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8000'
+// See public.ts: empty base in production (same-origin via Vercel's /api proxy),
+// localhost backend in dev.
+const API_BASE = import.meta.env.VITE_API_BASE ?? (import.meta.env.DEV ? 'http://localhost:8000' : '')
 
 export async function fetchStandings(): Promise<StandingsEntry[]> {
   const res = await fetch(`${API_BASE}/api/standings`)

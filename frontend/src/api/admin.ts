@@ -1,7 +1,9 @@
 // Talks to the admin API (see contracts/admin.md). Every call sends the session
 // cookie with `credentials: 'include'` so the backend knows we're logged in.
 
-const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8000'
+// See public.ts: empty base in production (same-origin via Vercel's /api proxy),
+// localhost backend in dev.
+const API_BASE = import.meta.env.VITE_API_BASE ?? (import.meta.env.DEV ? 'http://localhost:8000' : '')
 
 export interface Member {
   id: number
