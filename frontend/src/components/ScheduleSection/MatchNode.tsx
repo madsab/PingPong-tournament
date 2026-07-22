@@ -1,4 +1,5 @@
 import { Handle, Position, type NodeProps } from '@xyflow/react'
+import { TeamLogo } from '../TeamLogo/TeamLogo'
 import type { MatchNodeData } from './scheduleGraph'
 import styles from './MatchNode.module.css'
 
@@ -19,11 +20,17 @@ export function MatchNode({ data }: NodeProps) {
       <Handle type="target" position={Position.Left} className={styles.handle} />
 
       <div className={rowClass('a')}>
-        <span className={styles.name}>{match.team_a.name}</span>
+        <span className={styles.teamCell}>
+          <TeamLogo logoUrl={match.team_a.logo_url} name={match.team_a.name} />
+          <span className={styles.name}>{match.team_a.name}</span>
+        </span>
         <span className={styles.score}>{scheduled ? '' : result?.games_won_a}</span>
       </div>
       <div className={rowClass('b')}>
-        <span className={styles.name}>{match.team_b.name}</span>
+        <span className={styles.teamCell}>
+          <TeamLogo logoUrl={match.team_b.logo_url} name={match.team_b.name} />
+          <span className={styles.name}>{match.team_b.name}</span>
+        </span>
         <span className={styles.score}>{scheduled ? '' : result?.games_won_b}</span>
       </div>
 

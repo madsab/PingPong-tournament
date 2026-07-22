@@ -1,4 +1,5 @@
 import type { PublicMatch } from '../../api/public'
+import { TeamLogo } from '../TeamLogo/TeamLogo'
 import styles from './MatchDetail.module.css'
 
 interface MatchDetailProps {
@@ -30,9 +31,19 @@ export function MatchDetail({ match }: MatchDetailProps) {
       <table className={styles.games}>
         <thead>
           <tr>
-            <th className={styles.playerCol}>{match.team_a.name}</th>
+            <th className={styles.playerCol}>
+              <span className={styles.teamCell}>
+                <TeamLogo logoUrl={match.team_a.logo_url} name={match.team_a.name} />
+                {match.team_a.name}
+              </span>
+            </th>
             <th className={styles.scoreCol}>Score</th>
-            <th className={styles.playerCol}>{match.team_b.name}</th>
+            <th className={styles.playerCol}>
+              <span className={styles.teamCell}>
+                <TeamLogo logoUrl={match.team_b.logo_url} name={match.team_b.name} />
+                {match.team_b.name}
+              </span>
+            </th>
           </tr>
         </thead>
         <tbody>

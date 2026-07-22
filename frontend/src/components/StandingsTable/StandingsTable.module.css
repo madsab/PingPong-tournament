@@ -32,6 +32,13 @@
   font-weight: var(--fw-name);
 }
 
+/* Logo sits immediately before the team name (FR-004). */
+.teamCell {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .pts {
   color: var(--color-flame);
   font-weight: var(--fw-name);

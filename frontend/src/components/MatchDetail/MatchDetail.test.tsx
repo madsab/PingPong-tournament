@@ -17,8 +17,8 @@ function game(over: Partial<PublicMatch['games'][number]>) {
 
 const base: PublicMatch = {
   id: 1,
-  team_a: { id: 1, name: 'Spin Doctors' },
-  team_b: { id: 2, name: 'Net Ninjas' },
+  team_a: { id: 1, name: 'Spin Doctors', logo_url: '/logos/spin.png' },
+  team_b: { id: 2, name: 'Net Ninjas', logo_url: null },
   status: 'completed',
   result: { winner: 'a', games_won_a: 2, games_won_b: 1 },
   games: [game({}), game({ member_a_name: 'Ada', member_b_name: 'Cara', team_a_score: 9, team_b_score: 11 })],
@@ -30,6 +30,16 @@ describe('MatchDetail', () => {
     expect(screen.getByText('Spin Doctors')).toBeInTheDocument()
     expect(screen.getByText('Net Ninjas')).toBeInTheDocument()
     expect(screen.getByText(/spin doctors win 2–1/i)).toBeInTheDocument()
+  })
+
+  it('shows the team logo before the team name in the header (FR-004)', () => {
+    render(<MatchDetail match={base} />)
+    const header = screen.getAllByRole('row')[0]
+    const th = within(header).getAllByRole('columnheader')[0]
+    expect(th.querySelector('img')).toHaveAttribute('src', '/logos/spin.png')
+    // Logo precedes the name within the header cell.
+    const inner = th.innerHTML
+    expect(inner.indexOf('img')).toBeLessThan(inner.indexOf('Spin Doctors'))
   })
 
   it('lists every game with its two players and score', () => {

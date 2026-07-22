@@ -19,8 +19,8 @@ function node(match: PublicMatch) {
 
 const completed: PublicMatch = {
   id: 1,
-  team_a: { id: 1, name: 'Spin Doctors' },
-  team_b: { id: 2, name: 'Net Ninjas' },
+  team_a: { id: 1, name: 'Spin Doctors', logo_url: '/logos/spin.png' },
+  team_b: { id: 2, name: 'Net Ninjas', logo_url: null },
   status: 'completed',
   result: { winner: 'a', games_won_a: 2, games_won_b: 1 },
   games: [],
@@ -53,6 +53,15 @@ describe('MatchNode', () => {
     }
     render(node(draw))
     expect(screen.getByText('Draw')).toBeInTheDocument()
+  })
+
+  it('shows the team logo before the team name (FR-004)', () => {
+    const { container } = render(node(completed))
+    const img = container.querySelector('img')
+    expect(img).toHaveAttribute('src', '/logos/spin.png')
+    // Logo precedes the team name in the DOM order of the row.
+    const html = container.innerHTML
+    expect(html.indexOf('img')).toBeLessThan(html.indexOf('Spin Doctors'))
   })
 
   it('marks the winning team row as the winner', () => {

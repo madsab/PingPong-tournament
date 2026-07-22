@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { fetchLeaderboard, type LeaderboardEntry } from '../../api/public'
+import { TeamLogo } from '../TeamLogo/TeamLogo'
 import styles from './LeaderboardSection.module.css'
 
 type LoadState =
@@ -72,7 +73,16 @@ export function LeaderboardSection() {
                 <tr key={e.member_id} className={styles.row}>
                   <td className={styles.rankCol}>{e.rank}</td>
                   <td className={styles.nameCol}>{e.member_name}</td>
-                  <td className={styles.teamCol}>{e.team_name ?? '—'}</td>
+                  <td className={styles.teamCol}>
+                    {e.team_name ? (
+                      <span className={styles.teamCell}>
+                        <TeamLogo logoUrl={e.team_logo_url} name={e.team_name} />
+                        {e.team_name}
+                      </span>
+                    ) : (
+                      '—'
+                    )}
+                  </td>
                   <td className={styles.won}>{e.won}</td>
                   <td>{e.lost}</td>
                   <td>{pct(e.win_pct)}</td>

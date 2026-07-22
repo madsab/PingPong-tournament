@@ -13,6 +13,7 @@ export interface LeaderboardEntry {
   member_id: number
   member_name: string
   team_name: string | null
+  team_logo_url: string | null
   played: number
   won: number
   lost: number
@@ -38,6 +39,7 @@ export async function fetchLeaderboard(): Promise<LeaderboardEntry[]> {
 export interface PublicTeamRef {
   id: number
   name: string
+  logo_url: string | null
 }
 
 export interface PublicGame {

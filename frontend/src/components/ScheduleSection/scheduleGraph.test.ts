@@ -10,8 +10,8 @@ function match(
 ): PublicMatch {
   return {
     id: nextId++,
-    team_a: { id: aId, name: `T${aId}` },
-    team_b: { id: bId, name: `T${bId}` },
+    team_a: { id: aId, name: `T${aId}`, logo_url: null },
+    team_b: { id: bId, name: `T${bId}`, logo_url: null },
     status,
     result: status === 'completed' ? { winner: 'a', games_won_a: 2, games_won_b: 1 } : null,
     games: [],

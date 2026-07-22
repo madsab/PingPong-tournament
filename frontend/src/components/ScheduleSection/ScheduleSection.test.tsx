@@ -20,8 +20,8 @@ const mockFetch = vi.mocked(fetchMatches)
 
 const played: PublicMatch = {
   id: 1,
-  team_a: { id: 1, name: 'Net Ninjas' },
-  team_b: { id: 2, name: 'Table Titans' },
+  team_a: { id: 1, name: 'Net Ninjas', logo_url: null },
+  team_b: { id: 2, name: 'Table Titans', logo_url: null },
   status: 'completed',
   result: { winner: 'a', games_won_a: 2, games_won_b: 1 },
   games: [],

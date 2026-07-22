@@ -22,6 +22,7 @@ class LeaderboardEntry:
     member_id: int
     member_name: str
     team_name: str | None
+    team_logo_url: str | None = None
     played: int = 0
     won: int = 0
     lost: int = 0
@@ -35,6 +36,14 @@ def _team_name(member) -> str | None:
     if team is not None:
         return team.name
     return getattr(member, "team_name", None)
+
+
+def _team_logo(member) -> str | None:
+    """The player's team logo URL (for display beside the name). None if unset."""
+    team = getattr(member, "team", None)
+    if team is not None:
+        return getattr(team, "logo_url", None)
+    return None
 
 
 def _completed(matches):
@@ -55,7 +64,10 @@ def compute_leaderboard(members, matches) -> list[LeaderboardEntry]:
     """Rank every player per §3.6. Only games in completed matches count."""
     entries: dict[int, LeaderboardEntry] = {
         m.id: LeaderboardEntry(
-            member_id=m.id, member_name=m.name, team_name=_team_name(m)
+            member_id=m.id,
+            member_name=m.name,
+            team_name=_team_name(m),
+            team_logo_url=_team_logo(m),
         )
         for m in members
     }

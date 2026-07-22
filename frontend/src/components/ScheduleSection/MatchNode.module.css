@@ -34,6 +34,14 @@
   border-top: 1px solid var(--color-hairline);
 }
 
+/* Logo + name group on the left of a team row; min-width:0 lets the name ellipsize. */
+.teamCell {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
 .name {
   font-weight: var(--fw-name);
   white-space: nowrap;

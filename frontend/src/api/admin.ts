@@ -86,13 +86,24 @@ export const getSession = () =>
 export const listTeams = () =>
   request<{ teams: Team[] }>('/api/admin/teams').then((r) => r.teams)
 
-export const createTeam = (name: string) =>
-  request<Team>('/api/admin/teams', { method: 'POST', body: JSON.stringify({ name }) })
+export const createTeam = (name: string, logoUrl = '') =>
+  request<Team>('/api/admin/teams', {
+    method: 'POST',
+    body: JSON.stringify({ name, logo_url: logoUrl }),
+  })
 
 export const renameTeam = (id: number, name: string) =>
   request<Team>(`/api/admin/teams/${id}`, {
     method: 'PUT',
     body: JSON.stringify({ name }),
+  })
+
+// Set (or clear, with '') a team's logo URL. Separate from renameTeam so each edit
+// on the team card saves just its own field.
+export const updateTeamLogo = (id: number, logoUrl: string) =>
+  request<Team>(`/api/admin/teams/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({ logo_url: logoUrl }),
   })
 
 export const deleteTeam = (id: number) =>

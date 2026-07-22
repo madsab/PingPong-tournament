@@ -8,6 +8,7 @@ import {
   listTeams,
   renameMember,
   renameTeam,
+  updateTeamLogo,
   type Team,
 } from '../../../api/admin'
 import styles from './TeamsManager.module.css'
@@ -16,6 +17,7 @@ import styles from './TeamsManager.module.css'
 export function TeamsManager() {
   const [teams, setTeams] = useState<Team[]>([])
   const [newTeam, setNewTeam] = useState('')
+  const [newLogo, setNewLogo] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   function reload() {
@@ -39,7 +41,10 @@ export function TeamsManager() {
   function addTeam(e: FormEvent) {
     e.preventDefault()
     if (!newTeam.trim()) return
-    run(() => createTeam(newTeam.trim())).then(() => setNewTeam(''))
+    run(() => createTeam(newTeam.trim(), newLogo.trim())).then(() => {
+      setNewTeam('')
+      setNewLogo('')
+    })
   }
 
   return (
@@ -50,6 +55,13 @@ export function TeamsManager() {
           value={newTeam}
           onChange={(e) => setNewTeam(e.target.value)}
           placeholder="New team name"
+          className={styles.input}
+        />
+        <input
+          aria-label="New team logo URL"
+          value={newLogo}
+          onChange={(e) => setNewLogo(e.target.value)}
+          placeholder="Logo URL (optional)"
           className={styles.input}
         />
         <button type="submit" className={styles.primary}>
@@ -80,6 +92,7 @@ function TeamCard({
   onChange: (action: () => Promise<unknown>) => void
 }) {
   const [name, setName] = useState(team.name)
+  const [logo, setLogo] = useState(team.logo_url ?? '')
   const [newMember, setNewMember] = useState('')
 
   return (
@@ -102,6 +115,22 @@ function TeamCard({
           onClick={() => onChange(() => deleteTeam(team.id))}
         >
           Delete team
+        </button>
+      </div>
+
+      <div className={styles.teamHeader}>
+        <input
+          aria-label={`Logo URL for ${team.name}`}
+          value={logo}
+          onChange={(e) => setLogo(e.target.value)}
+          placeholder="Logo URL (blank to remove)"
+          className={styles.input}
+        />
+        <button
+          className={styles.secondary}
+          onClick={() => onChange(() => updateTeamLogo(team.id, logo.trim()))}
+        >
+          Save logo
         </button>
       </div>
 

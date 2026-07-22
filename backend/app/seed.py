@@ -14,10 +14,22 @@ from __future__ import annotations
 from app.db import Base, SessionLocal, engine
 from app.models import Game, Match, MatchStatus, Member, Team
 
-# (name, logo_url, [member names])
+# A tiny self-contained SVG logo (a coloured disc with initials) so the demo shows
+# real logos without needing any network/hosted image. Admins normally paste a URL.
+def _demo_logo(initials: str, colour: str) -> str:
+    svg = (
+        "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>"
+        f"<circle cx='32' cy='32' r='30' fill='{colour}'/>"
+        "<text x='32' y='41' font-family='sans-serif' font-size='24' "
+        f"font-weight='700' text-anchor='middle' fill='white'>{initials}</text></svg>"
+    )
+    return "data:image/svg+xml;utf8," + svg
+
+
+# (name, logo_url, [member names]) — a couple of teams carry a demo logo.
 TEAMS = [
-    ("Spin Doctors", None, ["Ada", "Ben", "Cara"]),
-    ("Paddle Battle", None, ["Dan", "Eve"]),
+    ("Spin Doctors", _demo_logo("SD", "crimson"), ["Ada", "Ben", "Cara"]),
+    ("Paddle Battle", _demo_logo("PB", "orangered"), ["Dan", "Eve"]),
     ("Net Ninjas", None, ["Finn", "Gina", "Hugo"]),
     ("Table Titans", None, ["Ivy", "Jack"]),
 ]

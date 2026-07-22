@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import type { StandingsEntry } from '../../api/standings'
+import { initials } from '../../lib/initials'
 import styles from './TeamCrest.module.css'
 
 interface TeamCrestProps {
@@ -8,18 +10,12 @@ interface TeamCrestProps {
   entered?: boolean
 }
 
-// First letter of up to two words, e.g. "Spin Doctors" -> "SD".
-function initials(name: string): string {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((word) => word[0]!.toUpperCase())
-    .join('')
-}
-
 export function TeamCrest({ entry, side, entered = true }: TeamCrestProps) {
   const isChampion = entry.rank === 1
+  // If the logo URL fails to load, drop to the initials placeholder rather than
+  // showing a broken image (FR-005, §9.7).
+  const [logoFailed, setLogoFailed] = useState(false)
+  const showLogo = Boolean(entry.logo_url) && !logoFailed
 
   const className = [
     styles.crest,
@@ -42,8 +38,13 @@ export function TeamCrest({ entry, side, entered = true }: TeamCrestProps) {
             ♔
           </span>
         )}
-        {entry.logo_url ? (
-          <img src={entry.logo_url} alt={entry.team_name} className={styles.image} />
+        {showLogo ? (
+          <img
+            src={entry.logo_url!}
+            alt={entry.team_name}
+            className={styles.image}
+            onError={() => setLogoFailed(true)}
+          />
         ) : (
           <span className={styles.placeholder} aria-hidden="true">
             {initials(entry.team_name)}

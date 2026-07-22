@@ -36,6 +36,13 @@
   text-align: left;
 }
 
+/* Team logo sits immediately before the team name in the header (FR-004). */
+.teamCell {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .scoreCol {
   text-align: center;
   width: 5rem;

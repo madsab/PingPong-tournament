@@ -17,6 +17,7 @@ function entry(over: Partial<LeaderboardEntry>): LeaderboardEntry {
     member_id: 1,
     member_name: 'Ada',
     team_name: 'Spin Doctors',
+    team_logo_url: null,
     played: 3,
     won: 2,
     lost: 1,
@@ -50,6 +51,18 @@ describe('LeaderboardSection', () => {
     expect(cells[4]).toHaveTextContent('1') // lost
     expect(cells[5]).toHaveTextContent('83%') // win % rounded
     expect(cells[6]).toHaveTextContent('+21') // point diff, signed
+  })
+
+  it('shows the team logo before the team name in the Team column (FR-004)', async () => {
+    mockFetch.mockResolvedValue([
+      entry({ member_name: 'Ada', team_name: 'Spin Doctors', team_logo_url: '/logos/spin.png' }),
+    ])
+    render(<LeaderboardSection />)
+    await waitFor(() => expect(screen.getByText('Ada')).toBeInTheDocument())
+
+    const teamCell = within(screen.getAllByRole('row')[1]).getAllByRole('cell')[2]
+    expect(teamCell.querySelector('img')).toHaveAttribute('src', '/logos/spin.png')
+    expect(teamCell.textContent).toContain('Spin Doctors')
   })
 
   it('shows an empty state when there are no players', async () => {

@@ -34,6 +34,7 @@ class LeaderboardEntryOut(BaseModel):
     member_id: int
     member_name: str
     team_name: str | None
+    team_logo_url: str | None
     played: int
     won: int
     lost: int
@@ -48,6 +49,7 @@ class LeaderboardResponse(BaseModel):
 class PublicTeamRef(BaseModel):
     id: int
     name: str
+    logo_url: str | None
 
 
 class PublicGameOut(BaseModel):

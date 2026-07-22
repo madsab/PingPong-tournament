@@ -27,6 +27,30 @@ def test_create_rename_delete_team(admin_client):
     assert admin_client.put(f"/api/admin/teams/{team_id}", json={"name": "x"}).status_code == 404
 
 
+def test_team_logo_url_round_trips_on_create_and_update(admin_client):
+    # Create with a logo (F-005/US1): it comes back on the team.
+    resp = admin_client.post(
+        "/api/admin/teams",
+        json={"name": "Logos", "logo_url": "https://cdn.example/logo.png"},
+    )
+    assert resp.status_code == 201
+    team_id = resp.json()["id"]
+    assert resp.json()["logo_url"] == "https://cdn.example/logo.png"
+
+    # Change the logo via update.
+    resp = admin_client.put(
+        f"/api/admin/teams/{team_id}",
+        json={"logo_url": "https://cdn.example/new.png"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["logo_url"] == "https://cdn.example/new.png"
+
+    # Empty string clears the logo (the frontend treats empty as "no logo").
+    resp = admin_client.put(f"/api/admin/teams/{team_id}", json={"logo_url": ""})
+    assert resp.status_code == 200
+    assert resp.json()["logo_url"] == ""
+
+
 def test_duplicate_team_name_is_rejected(admin_client):
     admin_client.post("/api/admin/teams", json={"name": "Dupes"})
     resp = admin_client.post("/api/admin/teams", json={"name": "Dupes"})

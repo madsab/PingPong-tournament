@@ -46,4 +46,18 @@ describe('StandingsTable', () => {
     const { container } = render(<StandingsTable entries={[]} />)
     expect(container).toBeEmptyDOMElement()
   })
+
+  it('shows the team logo before the team name (FR-004)', () => {
+    render(
+      <StandingsTable
+        entries={[entry({ team_name: 'Net Ninjas', logo_url: '/logos/nn.png' })]}
+      />,
+    )
+    const cell = within(screen.getAllByRole('row')[1]).getAllByRole('cell')[1]
+    const img = cell.querySelector('img')
+    expect(img).toHaveAttribute('src', '/logos/nn.png')
+    // Logo comes before the name text within the cell.
+    expect(cell.textContent).toContain('Net Ninjas')
+    expect(cell.innerHTML.indexOf('img')).toBeLessThan(cell.innerHTML.indexOf('Net Ninjas'))
+  })
 })

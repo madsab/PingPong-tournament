@@ -142,6 +142,18 @@ def test_leaderboard_skips_null_link_for_missing_side(client, db_session):
     assert by_name["Ben"]["played"] == 0  # skipped, listed with zeros
 
 
+def test_leaderboard_carries_team_logo_url(client, db_session):
+    alpha = _make_team(db_session, "Alpha", logo_url="/logos/alpha.png")
+    bravo = _make_team(db_session, "Bravo", logo_url=None)
+    _make_member(db_session, "Ada", alpha)
+    _make_member(db_session, "Ben", bravo)
+    db_session.commit()
+
+    by_name = {e["member_name"]: e for e in client.get("/api/leaderboard").json()["entries"]}
+    assert by_name["Ada"]["team_logo_url"] == "/logos/alpha.png"
+    assert by_name["Ben"]["team_logo_url"] is None
+
+
 # --- GET /api/matches (F3 + F4) ------------------------------------------------
 
 
@@ -174,6 +186,17 @@ def test_matches_scheduled_has_no_result_or_games(client, db_session):
     assert m["result"] is None
     assert m["games"] == []
     assert m["team_a"]["name"] == "Alpha" and m["team_b"]["name"] == "Bravo"
+
+
+def test_matches_team_refs_carry_logo_url(client, db_session):
+    alpha = _make_team(db_session, "Alpha", logo_url="/logos/alpha.png")
+    bravo = _make_team(db_session, "Bravo", logo_url=None)
+    _scheduled_match(db_session, alpha, bravo)
+    db_session.commit()
+
+    m = client.get("/api/matches").json()["matches"][0]
+    assert m["team_a"]["logo_url"] == "/logos/alpha.png"
+    assert m["team_b"]["logo_url"] is None
 
 
 def test_matches_completed_has_result_and_games_won_score(client, db_session):

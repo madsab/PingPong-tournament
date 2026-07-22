@@ -97,8 +97,16 @@ def get_matches(db: Session = Depends(get_db)) -> PublicMatchesResponse:
         out.append(
             PublicMatchOut(
                 id=m.id,
-                team_a={"id": m.team_a.id, "name": m.team_a.name},
-                team_b={"id": m.team_b.id, "name": m.team_b.name},
+                team_a={
+                    "id": m.team_a.id,
+                    "name": m.team_a.name,
+                    "logo_url": m.team_a.logo_url,
+                },
+                team_b={
+                    "id": m.team_b.id,
+                    "name": m.team_b.name,
+                    "logo_url": m.team_b.logo_url,
+                },
                 status=status,
                 result=result,
                 games=games,

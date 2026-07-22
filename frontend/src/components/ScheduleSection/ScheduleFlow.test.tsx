@@ -40,8 +40,8 @@ vi.mock('@xyflow/react', () => {
 
 const played: PublicMatch = {
   id: 1,
-  team_a: { id: 1, name: 'Net Ninjas' },
-  team_b: { id: 2, name: 'Table Titans' },
+  team_a: { id: 1, name: 'Net Ninjas', logo_url: null },
+  team_b: { id: 2, name: 'Table Titans', logo_url: null },
   status: 'completed',
   result: { winner: 'a', games_won_a: 2, games_won_b: 1 },
   games: [
@@ -58,8 +58,8 @@ const played: PublicMatch = {
 
 const scheduled: PublicMatch = {
   id: 2,
-  team_a: { id: 1, name: 'Net Ninjas' },
-  team_b: { id: 3, name: 'Spin Doctors' },
+  team_a: { id: 1, name: 'Net Ninjas', logo_url: null },
+  team_b: { id: 3, name: 'Spin Doctors', logo_url: null },
   status: 'scheduled',
   result: null,
   games: [],

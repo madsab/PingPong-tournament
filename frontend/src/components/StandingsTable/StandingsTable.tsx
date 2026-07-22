@@ -1,4 +1,5 @@
 import type { StandingsEntry } from '../../api/standings'
+import { TeamLogo } from '../TeamLogo/TeamLogo'
 import styles from './StandingsTable.module.css'
 
 interface StandingsTableProps {
@@ -30,7 +31,12 @@ export function StandingsTable({ entries }: StandingsTableProps) {
         {entries.map((e) => (
           <tr key={e.team_id} className={styles.row}>
             <td className={styles.rankCol}>{e.rank}</td>
-            <td className={styles.teamCol}>{e.team_name}</td>
+            <td className={styles.teamCol}>
+              <span className={styles.teamCell}>
+                <TeamLogo logoUrl={e.logo_url} name={e.team_name} />
+                {e.team_name}
+              </span>
+            </td>
             <td>{e.played}</td>
             <td>{`${e.wins}-${e.draws}-${e.losses}`}</td>
             <td className={styles.pts}>{e.points}</td>

@@ -101,3 +101,13 @@ def test_team_name_is_carried_through():
     ada = member(1, "Ada", team_name="Spin Doctors")
     ranked = compute_leaderboard([ada], [])
     assert ranked[0].team_name == "Spin Doctors"
+
+
+def test_team_logo_url_is_carried_through_and_defaults_to_none():
+    # A player whose team has a logo exposes it; one whose team has none → None.
+    ada = member(1, "Ada", team_name="Spin Doctors")
+    ada.team.logo_url = "https://cdn.example/spin.png"
+    ben = member(2, "Ben", team_name="Net Ninjas")  # team has no logo_url attr
+    ranked = {e.member_name: e for e in compute_leaderboard([ada, ben], [])}
+    assert ranked["Ada"].team_logo_url == "https://cdn.example/spin.png"
+    assert ranked["Ben"].team_logo_url is None

@@ -65,6 +65,13 @@
   color: var(--color-ash);
 }
 
+/* Team logo sits immediately before the team name (FR-004). */
+.teamCell {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .won {
   color: var(--color-flame);
   font-weight: var(--fw-name);

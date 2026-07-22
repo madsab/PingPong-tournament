@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { TeamCrest } from './TeamCrest'
 import type { StandingsEntry } from '../../api/standings'
@@ -36,6 +36,19 @@ describe('TeamCrest', () => {
     render(<TeamCrest entry={entry({ logo_url: null })} side="left" />)
     expect(screen.queryByRole('img')).not.toBeInTheDocument()
     expect(screen.getByText('SD')).toBeInTheDocument() // Spin Doctors -> SD
+  })
+
+  it('keeps the champion crown when the rank-1 team has a logo', () => {
+    render(<TeamCrest entry={entry({ rank: 1, logo_url: '/logos/spin.png' })} side="left" />)
+    expect(screen.getByRole('img', { name: /spin doctors/i })).toBeInTheDocument()
+    expect(screen.getByTestId('champion-crown')).toBeInTheDocument()
+  })
+
+  it('falls back to initials (no broken image) when the logo fails to load', () => {
+    render(<TeamCrest entry={entry({ logo_url: '/logos/broken.png' })} side="left" />)
+    fireEvent.error(screen.getByRole('img'))
+    expect(screen.queryByRole('img')).not.toBeInTheDocument()
+    expect(screen.getByText('SD')).toBeInTheDocument()
   })
 
   it('shows the champion marker only for rank 1', () => {
