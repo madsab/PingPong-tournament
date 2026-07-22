@@ -19,6 +19,9 @@ services:
   backend:
     build: ./backend
     restart: unless-stopped
+    # The image's default CMD is the production one (no reload). For local dev we
+    # override it here to get hot-reload, since the source is bind-mounted below.
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     environment:
       DATABASE_URL: postgresql://pingpong:pingpong@db:5432/pingpong
       # Admin login (F6). Generate a hash with:

@@ -28,3 +28,41 @@ def get_session_secret() -> str:
 def get_admin_password_hash() -> str:
     """The stored ``salt$iterations$hexhash``. Empty string → login disabled."""
     return os.getenv("ADMIN_PASSWORD_HASH", "")
+
+
+# A dev fallback so local `npm run dev` (Vite on :5173) can call the API without
+# any config. Production MUST set FRONTEND_ORIGIN to the deployed frontend URL(s).
+_DEV_FRONTEND_ORIGIN = "http://localhost:5173"
+
+
+def get_frontend_origins() -> list[str]:
+    """Origins allowed to call the API (CORS).
+
+    Reads ``FRONTEND_ORIGIN`` — a comma-separated list so more than one origin
+    (e.g. a Vercel production URL plus a preview URL) can be allowed. Falls back
+    to the local Vite dev server when unset. Because the API sends credentials
+    (the admin cookie), these must be explicit origins, never ``*``.
+    """
+    raw = os.getenv("FRONTEND_ORIGIN")
+    if not raw:
+        return [_DEV_FRONTEND_ORIGIN]
+    return [origin.strip() for origin in raw.split(",") if origin.strip()]
+
+
+def get_cookie_same_site() -> str:
+    """SameSite policy for the admin session cookie.
+
+    Default ``lax`` works locally (frontend and backend are both localhost, so
+    same-site). Cross-domain deploys (Vercel frontend + Render backend) must set
+    this to ``none`` or the browser silently drops the cookie.
+    """
+    return os.getenv("SESSION_COOKIE_SAMESITE", "lax")
+
+
+def get_cookie_https_only() -> bool:
+    """Whether the session cookie requires HTTPS (the ``Secure`` flag).
+
+    Default off for local http. Must be on in production — and a ``SameSite=none``
+    cookie is only accepted by browsers when it is also ``Secure``.
+    """
+    return os.getenv("SESSION_COOKIE_HTTPS_ONLY", "").lower() in {"1", "true", "yes"}
