@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { fetchMatches, type PublicMatch } from '../../api/public'
+import { RulesBanner } from '../RulesBanner/RulesBanner'
 import { ScheduleFlow } from './ScheduleFlow'
 import styles from './ScheduleSection.module.css'
 
@@ -34,6 +35,10 @@ export function ScheduleSection() {
   return (
     <section className={styles.section}>
       <p className={styles.eyebrow}>Schedule</p>
+
+      {/* Static tournament rules — always shown above the schedule, regardless
+          of the schedule's load state. */}
+      <RulesBanner />
 
       {state.status === 'loading' && <p className={styles.notice}>Loading matches…</p>}
 

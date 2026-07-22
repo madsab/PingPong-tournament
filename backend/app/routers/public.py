@@ -18,6 +18,13 @@ from app.standings import compute_standings, decide_match
 router = APIRouter(prefix="/api", tags=["public"])
 
 
+@router.get("/health", tags=["health"])
+def health() -> dict[str, str]:
+    """Lightweight liveness check. No DB work so it returns instantly — used by
+    the frontend keep-alive ping to stop the free-tier host spinning down."""
+    return {"status": "ok"}
+
+
 @router.get("/standings", response_model=StandingsResponse)
 def get_standings(db: Session = Depends(get_db)) -> StandingsResponse:
     """Return every team ranked per SPECIFICATIONS §3.5, computed on read."""

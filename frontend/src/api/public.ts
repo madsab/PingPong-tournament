@@ -8,6 +8,17 @@
 // same-origin. Local dev falls back to the separate backend on :8000.
 const API_BASE = import.meta.env.VITE_API_BASE ?? (import.meta.env.DEV ? 'http://localhost:8000' : '')
 
+// Keep-alive ping. The backend runs on a free-tier host that spins down when idle;
+// a periodic hit on this cheap endpoint keeps it warm. Best-effort: a failed ping
+// must never surface to the user, so we swallow errors.
+export async function pingHealth(): Promise<void> {
+  try {
+    await fetch(`${API_BASE}/api/health`)
+  } catch {
+    // ignored — keep-alive is best-effort
+  }
+}
+
 // --- Leaderboard (F2) ----------------------------------------------------------
 
 // One player's place in the leaderboard. Mirrors the backend LeaderboardEntryOut.

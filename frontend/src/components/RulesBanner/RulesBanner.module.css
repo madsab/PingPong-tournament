@@ -1,0 +1,44 @@
+/*
+ * The rules banner is deliberately quiet: it introduces the schedule rather than
+ * competing with it. Muted text + a hairline border + a faint card background,
+ * and it's dialled back with reduced opacity so it reads as additive.
+ * All colours come from tokens.css — no hard-coded values.
+ */
+.banner {
+  max-width: 900px;
+  margin: 0 auto clamp(1rem, 3vw, 1.75rem);
+  padding: clamp(0.75rem, 2.5vw, 1.1rem) clamp(1rem, 3vw, 1.5rem);
+  background: var(--color-char);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius);
+  opacity: 0.75; /* "a little less opacity" — subordinate to the schedule */
+}
+
+.label {
+  margin: 0 0 0.5rem;
+  font-weight: var(--fw-label);
+  font-size: 0.7rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--color-ash);
+}
+
+.list {
+  margin: 0;
+  padding-left: 1.25rem;
+  display: grid;
+  gap: 0.35rem;
+  color: var(--color-ash);
+  font-size: clamp(0.85rem, 2.5vw, 0.95rem);
+  line-height: 1.5;
+}
+
+.list li {
+  /* Long rules wrap cleanly instead of overflowing on narrow screens. */
+  overflow-wrap: break-word;
+}
+
+.list strong {
+  color: var(--color-text);
+  font-weight: var(--fw-name);
+}
