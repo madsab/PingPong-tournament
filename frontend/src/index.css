@@ -1,0 +1,31 @@
+/* Self-hosted Inter (via @fontsource) — the §9.3 family, weights we actually use. */
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/600.css';
+@import '@fontsource/inter/700.css';
+@import '@fontsource/inter/800.css';
+
+@import './theme/tokens.css';
+
+:root {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  /* §9.1 dark arena: Ink background, Inter, white text. */
+  background: var(--color-ink);
+  color: var(--color-text);
+  font-family: var(--font);
+  font-weight: var(--fw-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Visible keyboard focus in the heat colours, on any interactive element (§9.7). */
+:focus-visible {
+  outline: 2px solid var(--color-flame);
+  outline-offset: 2px;
+}

@@ -1,0 +1,31 @@
+/*
+ * Design tokens — the single place the SPECIFICATIONS §9 visual identity lives in
+ * code. Components read these variables; no component hard-codes a hex value, so a
+ * colour change happens here and nowhere else.
+ */
+
+:root {
+  /* §9.2 Colour palette (dark "arena") */
+  --color-ink: #0a0a0b; /* page background */
+  --color-char: #151517; /* cards, table rows, raised surfaces */
+  --color-ember: #e01f26; /* red heat — team A / left side */
+  --color-flame: #ff6a00; /* orange heat — team B / right side */
+  --color-gold: #ffc24b; /* rank-1 champion ONLY */
+  --color-text: #ffffff; /* primary text */
+  --color-ash: rgba(255, 255, 255, 0.6); /* muted text, labels */
+  --color-hairline: rgba(255, 255, 255, 0.08); /* borders, dividers */
+
+  /* §9.2 signature heat gradient (left → right) */
+  --grad-heat: linear-gradient(90deg, var(--color-ember), var(--color-flame));
+
+  /* §9.3 Typography — one clean family, personality from scale + weight */
+  --font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --fw-score: 800;
+  --fw-name: 700;
+  --fw-label: 600;
+  --fw-body: 400;
+
+  /* Spacing / shape helpers used across the section */
+  --radius: 12px;
+  --gap: clamp(1rem, 3vw, 2.5rem);
+}

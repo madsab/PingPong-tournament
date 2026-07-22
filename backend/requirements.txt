@@ -1,0 +1,10 @@
+fastapi==0.121.2
+uvicorn[standard]==0.34.0
+sqlalchemy==2.0.51
+psycopg[binary]==3.2.10
+# Signs the admin session cookie (used by Starlette's SessionMiddleware).
+itsdangerous==2.2.0
+
+# Tests
+pytest==8.3.4
+httpx==0.28.1

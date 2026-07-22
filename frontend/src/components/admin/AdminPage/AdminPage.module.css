@@ -1,0 +1,56 @@
+.page {
+  max-width: 60rem;
+  margin: 0 auto;
+  padding: clamp(1rem, 4vw, 2.5rem);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.title {
+  font-weight: var(--fw-name);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0;
+}
+
+.tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin: 1.5rem 0;
+  flex-wrap: wrap;
+}
+
+.tab,
+.tabActive {
+  padding: 0.5rem 1rem;
+  background: var(--color-char);
+  color: var(--color-ash);
+  border: 1px solid var(--color-hairline);
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+}
+
+.tabActive {
+  color: var(--color-text);
+  border-color: transparent;
+  background: var(--grad-heat);
+}
+
+.tab:focus-visible,
+.tabActive:focus-visible {
+  outline: 2px solid var(--color-ember);
+  outline-offset: 2px;
+}
+
+.notice {
+  text-align: center;
+  color: var(--color-ash);
+  margin: 4rem auto;
+}

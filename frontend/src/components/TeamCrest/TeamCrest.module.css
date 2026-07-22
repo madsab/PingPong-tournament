@@ -1,0 +1,108 @@
+.crest {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  text-align: center;
+  min-width: 0;
+}
+
+.logo {
+  position: relative;
+  width: clamp(6rem, 18vw, 12rem);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--color-char);
+  border: 1px solid var(--color-hairline);
+}
+
+/* Side glow: red for the left/#1 crest, orange for the right/#2 crest (§9.2). */
+.left .logo {
+  box-shadow: 0 0 3rem -0.5rem var(--color-ember);
+}
+.right .logo {
+  box-shadow: 0 0 3rem -0.5rem var(--color-flame);
+}
+
+.image {
+  width: 82%;
+  height: 82%;
+  object-fit: contain;
+  border-radius: 50%;
+}
+
+.placeholder {
+  font-weight: var(--fw-score);
+  font-size: clamp(1.75rem, 5vw, 3rem);
+  color: var(--color-text);
+  letter-spacing: 0.02em;
+}
+
+/* Champion Gold — rank 1 only (§9.2, §9.4). */
+.crown {
+  position: absolute;
+  top: -0.9em;
+  font-size: clamp(1.5rem, 4vw, 2.25rem);
+  color: var(--color-gold);
+  filter: drop-shadow(0 0 0.4rem rgba(255, 194, 75, 0.6));
+}
+.champion .logo {
+  border-color: var(--color-gold);
+}
+
+.rank {
+  font-weight: var(--fw-label);
+  font-size: 0.85rem;
+  letter-spacing: 0.15em;
+  color: var(--color-ash);
+}
+.champion .rank {
+  color: var(--color-gold);
+}
+
+.name {
+  margin: 0;
+  font-weight: var(--fw-name);
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  font-size: clamp(1.1rem, 3.5vw, 2rem);
+  line-height: 1.05;
+  overflow-wrap: anywhere;
+}
+
+/*
+ * US3 slide-in (§9.5). Crests start off their own side and transition to centre
+ * once .entered is applied. Reduced-motion visitors never get .offstage applied
+ * (the hero passes entered=true immediately), and this belt-and-braces rule makes
+ * sure any transition is inert if that path is ever reached.
+ */
+.offstage {
+  opacity: 0;
+}
+.left.offstage {
+  transform: translateX(-40%);
+}
+.right.offstage {
+  transform: translateX(40%);
+}
+.entered {
+  opacity: 1;
+  transform: translateX(0);
+}
+.crest {
+  transition:
+    transform 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.7s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crest {
+    transition: none;
+  }
+  .offstage {
+    opacity: 1;
+    transform: none;
+  }
+}

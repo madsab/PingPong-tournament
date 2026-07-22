@@ -1,0 +1,115 @@
+.rift {
+  position: relative;
+  display: grid;
+  place-items: center;
+  align-self: stretch;
+  min-width: clamp(4rem, 10vw, 7rem);
+}
+
+/* The glowing vertical seam in the heat gradient (§9.4). */
+.seam {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--grad-heat);
+  border-radius: 3px;
+  box-shadow: 0 0 1.5rem 0.1rem var(--color-ember);
+  transition: box-shadow 0.5s ease;
+}
+
+/* Flare when the crests arrive (§9.5, US3). */
+.flaring .seam {
+  box-shadow:
+    0 0 3rem 0.4rem var(--color-flame),
+    0 0 1.5rem 0.2rem var(--color-ember);
+}
+
+.scores {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.score {
+  font-weight: var(--fw-score);
+  font-size: clamp(2.5rem, 8vw, 5rem);
+  line-height: 1;
+  font-variant-numeric: tabular-nums; /* digits don't jitter (§9.3) */
+  text-shadow: 0 0 1.5rem rgba(224, 31, 38, 0.5);
+}
+
+.vs {
+  font-weight: var(--fw-label);
+  font-size: 0.8rem;
+  letter-spacing: 0.25em;
+  color: var(--color-ash);
+}
+
+/* Ambient embers drifting up behind the seam (§9.5, US3). Decorative only. */
+.embers {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.ember {
+  position: absolute;
+  bottom: -10%;
+  left: calc(50% + (var(--i) - 3) * 0.6rem);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--color-flame);
+  opacity: 0;
+  animation: rise 3.5s linear infinite;
+  animation-delay: calc(var(--i) * 0.5s);
+}
+
+@keyframes rise {
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(-14rem);
+    opacity: 0;
+  }
+}
+
+/* Mobile: teams stack, so the seam runs horizontally between them (§9.6). */
+@media (max-width: 640px) {
+  .rift {
+    width: 100%;
+    min-height: 4rem;
+    padding: 1rem 0;
+  }
+  .seam {
+    top: auto;
+    bottom: auto;
+    left: 0;
+    right: 0;
+    width: auto;
+    height: 3px;
+  }
+  .scores {
+    flex-direction: row;
+    gap: 1rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seam {
+    transition: none;
+  }
+  .embers {
+    display: none;
+  }
+}

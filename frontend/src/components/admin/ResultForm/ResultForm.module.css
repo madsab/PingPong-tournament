@@ -1,0 +1,98 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 1rem;
+  margin-top: 0.5rem;
+  background: var(--color-ink);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius);
+}
+
+.heading {
+  font-weight: var(--fw-name);
+  margin: 0 0 0.25rem;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.fixed {
+  flex: 1 1 6rem;
+  color: var(--color-text);
+}
+
+.select {
+  flex: 1 1 6rem;
+  min-width: 0;
+  padding: 0.4rem;
+  background: var(--color-char);
+  color: var(--color-text);
+  border: 1px solid var(--color-hairline);
+  border-radius: 6px;
+  font: inherit;
+}
+
+.score {
+  width: 3.5rem;
+  padding: 0.4rem;
+  background: var(--color-char);
+  color: var(--color-text);
+  border: 1px solid var(--color-hairline);
+  border-radius: 6px;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+.select:focus-visible,
+.score:focus-visible,
+.primary:focus-visible,
+.secondary:focus-visible {
+  outline: 2px solid var(--color-ember);
+  outline-offset: 2px;
+}
+
+.dash {
+  color: var(--color-ash);
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.primary,
+.secondary {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+  border: 1px solid var(--color-hairline);
+}
+
+.primary {
+  background: var(--grad-heat);
+  color: var(--color-text);
+  border-color: transparent;
+  font-weight: var(--fw-name);
+}
+
+.primary:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.secondary {
+  background: transparent;
+  color: var(--color-text);
+}
+
+.error {
+  color: var(--color-ember);
+  margin: 0;
+}

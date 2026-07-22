@@ -1,0 +1,44 @@
+.detail {
+  padding: 1rem clamp(0.5rem, 3vw, 1.5rem) 1.25rem;
+  background: var(--color-ink);
+  border-top: 1px solid var(--color-hairline);
+}
+
+.result {
+  margin: 0 0 0.75rem;
+  text-align: center;
+  font-weight: var(--fw-name);
+  color: var(--color-flame);
+}
+
+.games {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: clamp(0.8rem, 2.5vw, 0.95rem);
+}
+
+.games th {
+  padding: 0.5rem 0.75rem;
+  font-weight: var(--fw-label);
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-ash);
+  border-bottom: 1px solid var(--color-hairline);
+}
+
+.games td {
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--color-hairline);
+}
+
+.playerCol {
+  text-align: left;
+}
+
+.scoreCol {
+  text-align: center;
+  width: 5rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--fw-name);
+}
