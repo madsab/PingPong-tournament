@@ -14,7 +14,7 @@ import {
 import styles from './TeamsManager.module.css'
 
 // Manage teams and their rosters (F8/F9).
-export function TeamsManager() {
+export function TeamsManager({ onAuthLost }: { onAuthLost?: () => void }) {
   const [teams, setTeams] = useState<Team[]>([])
   const [newTeam, setNewTeam] = useState('')
   const [newLogo, setNewLogo] = useState('')
@@ -34,6 +34,12 @@ export function TeamsManager() {
       await action()
       reload()
     } catch (e) {
+      // A 401 means our token is no longer valid (expired, or the secret rotated) —
+      // send the user back to the login gate instead of showing an inline error.
+      if (e instanceof ApiError && e.status === 401) {
+        onAuthLost?.()
+        return
+      }
       setError(e instanceof ApiError ? e.message : 'Something went wrong')
     }
   }

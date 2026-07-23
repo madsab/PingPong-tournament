@@ -17,7 +17,7 @@ describe('LoginForm', () => {
   beforeEach(() => vi.clearAllMocks())
 
   it('logs in with the entered password', async () => {
-    vi.mocked(login).mockResolvedValue({ authenticated: true })
+    vi.mocked(login).mockResolvedValue({ authenticated: true, token: 'tok' })
     const onLoggedIn = vi.fn()
     render(<LoginForm onLoggedIn={onLoggedIn} />)
 
@@ -43,7 +43,7 @@ describe('LogoutButton', () => {
   beforeEach(() => vi.clearAllMocks())
 
   it('logs out and notifies the parent', async () => {
-    vi.mocked(logout).mockResolvedValue({ authenticated: false })
+    vi.mocked(logout).mockReturnValue(undefined)
     const onLoggedOut = vi.fn()
     render(<LogoutButton onLoggedOut={onLoggedOut} />)
 

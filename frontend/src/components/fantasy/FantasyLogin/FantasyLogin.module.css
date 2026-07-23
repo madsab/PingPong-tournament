@@ -1,0 +1,80 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: 28rem;
+  margin: 3rem auto;
+  padding: 2rem;
+  background: var(--color-char);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius);
+}
+
+.eyebrow {
+  font-weight: var(--fw-label);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--color-ash);
+  margin: 0;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(1.4rem, 4vw, 2rem);
+  color: var(--color-text);
+}
+
+.lede {
+  margin: 0 0 0.5rem;
+  color: var(--color-ash);
+}
+
+.label {
+  font-weight: var(--fw-label);
+  color: var(--color-ash);
+}
+
+.req {
+  color: var(--color-ember);
+  font-weight: var(--fw-body);
+}
+
+.input,
+.textarea {
+  padding: 0.6rem 0.75rem;
+  background: var(--color-ink);
+  border: 1px solid var(--color-hairline);
+  border-radius: 8px;
+  color: var(--color-text);
+  font: inherit;
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+}
+
+.input:focus-visible,
+.textarea:focus-visible,
+.button:focus-visible {
+  outline: 2px solid var(--color-ember);
+  outline-offset: 2px;
+}
+
+.button {
+  padding: 0.6rem 1rem;
+  background: var(--grad-heat);
+  color: var(--color-text);
+  font-weight: var(--fw-name);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.error {
+  color: var(--color-ember);
+  margin: 0;
+}

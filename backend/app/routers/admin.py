@@ -6,6 +6,8 @@ guard lives on ``_guarded`` below so a new endpoint can't forget it.
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -17,6 +19,7 @@ from app.models import Game, Match, MatchStatus, Member, Team
 from app.schemas import (
     GenerateScheduleResponse,
     LoginRequest,
+    LoginResponse,
     MatchCreate,
     MatchesResponse,
     MatchOut,
@@ -38,28 +41,25 @@ router = APIRouter(prefix="/api/admin", tags=["admin"])
 
 # --- Auth (no guard) -------------------------------------------------------------
 
-@router.post("/login", response_model=SessionOut)
-def login(body: LoginRequest, request: Request) -> SessionOut:
-    """Unlock the admin area with the shared password (F6)."""
+@router.post("/login", response_model=LoginResponse)
+def login(body: LoginRequest) -> LoginResponse:
+    """Unlock the admin area with the shared password (F6).
+
+    Returns a Bearer token the frontend stores and sends on every later request.
+    There's no server-side session to log out of (F7) — logging out is just the
+    frontend dropping the token.
+    """
     if not auth.check_password(body.password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Wrong password"
         )
-    request.session["admin"] = True
-    return SessionOut(authenticated=True)
-
-
-@router.post("/logout", response_model=SessionOut)
-def logout(request: Request) -> SessionOut:
-    """End the admin session (F7). Safe to call when already logged out."""
-    request.session.clear()
-    return SessionOut(authenticated=False)
+    return LoginResponse(authenticated=True, token=auth.make_admin_token())
 
 
 @router.get("/session", response_model=SessionOut)
 def session_state(request: Request) -> SessionOut:
-    """Tell the frontend whether the current visitor is logged in."""
-    return SessionOut(authenticated=bool(request.session.get("admin")))
+    """Tell the frontend whether the caller's Bearer token is currently valid."""
+    return SessionOut(authenticated=auth.verify_admin_token(auth._read_bearer(request)))
 
 
 # --- Guarded endpoints -----------------------------------------------------------
@@ -381,6 +381,10 @@ def record_result(
         for g in body.games
     ]
     match.status = MatchStatus.completed
+    # Stamp when the result was recorded so the fantasy feature (007) can credit
+    # CompuBucks only for games played after a player was picked. Naive UTC to match
+    # the func.now() defaults used elsewhere.
+    match.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
     db.commit()
     return _match_out(_load_match(db, match_id))
 

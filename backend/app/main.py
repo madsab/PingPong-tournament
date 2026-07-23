@@ -1,5 +1,3 @@
-from contextlib import asynccontextmanager
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
@@ -10,23 +8,13 @@ from app.config import (
     get_frontend_origins,
     get_session_secret,
 )
-from app.db import Base, engine
-from app.routers import admin, public
+from app.routers import admin, fantasy, public
 
-# Import models so their tables are registered on Base before we create them.
-from app import models  # noqa: F401
+# The database schema is owned by Alembic migrations, not created at startup.
+# Deploys run `alembic upgrade head` before the server boots (see the Dockerfile /
+# docker-compose command). Tests create their tables directly (see conftest).
 
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Create any missing tables on startup so a fresh database just works. This
-    # only CREATES missing tables; it does not alter existing ones (no migration
-    # tool yet), so an out-of-date schema still needs a DB reset — see README.
-    Base.metadata.create_all(engine)
-    yield
-
-
-app = FastAPI(title="PingPong API", lifespan=lifespan)
+app = FastAPI(title="PingPong API")
 
 # Signs the admin session cookie (F6). Must be added before the routers use it.
 # same_site/https_only come from env so a cross-domain deploy (frontend and
@@ -48,6 +36,7 @@ app.add_middleware(
 
 app.include_router(public.router)
 app.include_router(admin.router)
+app.include_router(fantasy.router)
 
 
 @app.get("/api/hello")

@@ -1,9 +1,17 @@
-// Talks to the admin API (see contracts/admin.md). Every call sends the session
-// cookie with `credentials: 'include'` so the backend knows we're logged in.
+// Talks to the admin API (see contracts/admin.md). Auth is a Bearer token (not a
+// cookie): login returns a token, we keep it in localStorage, and send it in the
+// `Authorization` header on every call. This works the same on any device/browser.
 
 // See public.ts: empty base in production (same-origin via Vercel's /api proxy),
 // localhost backend in dev.
 const API_BASE = import.meta.env.VITE_API_BASE ?? (import.meta.env.DEV ? 'http://localhost:8000' : '')
+
+// Where we remember the admin token between visits.
+const TOKEN_KEY = 'pingpong.admin.token'
+
+export const getToken = () => localStorage.getItem(TOKEN_KEY)
+export const setToken = (token: string) => localStorage.setItem(TOKEN_KEY, token)
+export const clearToken = () => localStorage.removeItem(TOKEN_KEY)
 
 export interface Member {
   id: number
@@ -52,12 +60,18 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const token = getToken()
   const res = await fetch(`${API_BASE}${path}`, {
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
     ...init,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...init?.headers,
+    },
   })
   if (!res.ok) {
+    // A stale/invalid token can never work again — drop it so the UI can re-gate.
+    if (res.status === 401) clearToken()
     let detail = `Request failed (${res.status})`
     try {
       const body = await res.json()
@@ -72,14 +86,18 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 // --- Auth ---
-export const login = (password: string) =>
-  request<{ authenticated: boolean }>('/api/admin/login', {
-    method: 'POST',
-    body: JSON.stringify({ password }),
-  })
+// Log in with the shared password; on success the token is stored for later calls.
+export const login = async (password: string) => {
+  const res = await request<{ authenticated: boolean; token: string }>(
+    '/api/admin/login',
+    { method: 'POST', body: JSON.stringify({ password }) },
+  )
+  setToken(res.token)
+  return res
+}
 
-export const logout = () =>
-  request<{ authenticated: boolean }>('/api/admin/logout', { method: 'POST' })
+// Logging out is purely local — there's no server session to end.
+export const logout = () => clearToken()
 
 export const getSession = () =>
   request<{ authenticated: boolean }>('/api/admin/session')

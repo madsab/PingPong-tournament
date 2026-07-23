@@ -9,6 +9,8 @@ from app.leaderboard import compute_leaderboard
 from app.models import Match, Member, Team
 from app.schemas import (
     LeaderboardResponse,
+    MembersResponse,
+    PlayerOut,
     PublicMatchesResponse,
     PublicMatchOut,
     StandingsResponse,
@@ -45,6 +47,29 @@ def get_leaderboard(db: Session = Depends(get_db)) -> LeaderboardResponse:
 
     ranking = compute_leaderboard(members, matches)
     return LeaderboardResponse(entries=[entry.__dict__ for entry in ranking])
+
+
+@router.get("/members", response_model=MembersResponse)
+def get_members(db: Session = Depends(get_db)) -> MembersResponse:
+    """Every real player, for the fantasy slot picker (feature 007). No login.
+
+    Ordered by team name then player name so the picker is easy to scan.
+    """
+    members = db.scalars(
+        select(Member).options(selectinload(Member.team))
+    ).all()
+    players = [
+        PlayerOut(
+            id=m.id,
+            name=m.name,
+            team_id=m.team_id,
+            team_name=m.team.name,
+            team_logo_url=m.team.logo_url,
+        )
+        for m in members
+    ]
+    players.sort(key=lambda p: (p.team_name.lower(), p.name.lower()))
+    return MembersResponse(members=players)
 
 
 def _games_won(match) -> tuple[int, int]:

@@ -4,7 +4,7 @@ These are what the frontend receives as JSON. They are separate from the ORM mod
 so the API shape and the database shape can change independently.
 """
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 
 class StandingsEntryOut(BaseModel):
@@ -88,6 +88,12 @@ class LoginRequest(BaseModel):
 
 class SessionOut(BaseModel):
     authenticated: bool
+
+
+class LoginResponse(BaseModel):
+    # The token the frontend stores and sends back as `Authorization: Bearer <token>`.
+    authenticated: bool
+    token: str
 
 
 class MemberOut(BaseModel):
@@ -176,3 +182,78 @@ class ResultRequest(BaseModel):
 class GenerateScheduleResponse(BaseModel):
     created: int
     skipped: int
+
+
+# --- Fantasy Teams shapes (feature 007, see contracts/fantasy-api.md) -------------
+# All validation lives here so the backend never trusts the frontend: names and
+# fun-facts must be non-empty after trimming and within length limits.
+
+
+def _clean_required(value: str, *, field: str, max_len: int) -> str:
+    """Trim, reject empty/whitespace-only, and enforce a max length."""
+    trimmed = (value or "").strip()
+    if not trimmed:
+        raise ValueError(f"{field} is required")
+    if len(trimmed) > max_len:
+        raise ValueError(f"{field} must be at most {max_len} characters")
+    return trimmed
+
+
+class FantasyRegisterRequest(BaseModel):
+    name: str
+    fun_fact: str
+
+    @field_validator("name")
+    @classmethod
+    def _name(cls, v: str) -> str:
+        return _clean_required(v, field="name", max_len=100)
+
+    @field_validator("fun_fact")
+    @classmethod
+    def _fun_fact(cls, v: str) -> str:
+        return _clean_required(v, field="fun_fact", max_len=280)
+
+
+class FantasyLoginRequest(BaseModel):
+    name: str
+
+    @field_validator("name")
+    @classmethod
+    def _name(cls, v: str) -> str:
+        return _clean_required(v, field="name", max_len=100)
+
+
+class FantasyUserOut(BaseModel):
+    id: int
+    name: str
+    fun_fact: str
+
+
+class FantasySlotOut(BaseModel):
+    slot_index: int
+    member_id: int | None
+    member_name: str | None
+    team_id: int | None
+    team_name: str | None
+    team_logo_url: str | None
+
+
+class FantasyTeamOut(BaseModel):
+    compubucks: int
+    slots: list[FantasySlotOut]  # always 4 entries, slot_index 1-4
+
+
+class SlotAssignRequest(BaseModel):
+    member_id: int
+
+
+class PlayerOut(BaseModel):
+    id: int
+    name: str
+    team_id: int
+    team_name: str
+    team_logo_url: str | None
+
+
+class MembersResponse(BaseModel):
+    members: list[PlayerOut]

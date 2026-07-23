@@ -2,7 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { TeamsManager } from './TeamsManager'
-import type { Team } from '../../../api/admin'
+import { ApiError, type Team } from '../../../api/admin'
 
 vi.mock('../../../api/admin', async () => {
   const actual = await vi.importActual<typeof import('../../../api/admin')>(
@@ -97,6 +97,16 @@ describe('TeamsManager', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /delete team/i }))
     await waitFor(() => expect(deleteTeam).toHaveBeenCalledWith(1))
+  })
+
+  it('calls onAuthLost when an action is rejected with 401', async () => {
+    vi.mocked(deleteTeam).mockRejectedValue(new ApiError(401, 'Not authenticated'))
+    const onAuthLost = vi.fn()
+    render(<TeamsManager onAuthLost={onAuthLost} />)
+    await screen.findByDisplayValue('Spin Doctors')
+
+    await userEvent.click(screen.getByRole('button', { name: /delete team/i }))
+    await waitFor(() => expect(onAuthLost).toHaveBeenCalled())
   })
 
   it('adds a member to a team', async () => {

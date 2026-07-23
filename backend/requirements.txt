@@ -1,6 +1,8 @@
 fastapi==0.121.2
 uvicorn[standard]==0.34.0
 sqlalchemy==2.0.51
+# Database migrations (versioned schema changes instead of drop-and-recreate).
+alembic==1.14.1
 psycopg[binary]==3.2.10
 # Signs the admin session cookie (used by Starlette's SessionMiddleware).
 itsdangerous==2.2.0

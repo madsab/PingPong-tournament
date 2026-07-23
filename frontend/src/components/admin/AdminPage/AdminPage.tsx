@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { getSession } from '../../../api/admin'
+import { getSession, getToken } from '../../../api/admin'
 import { LoginForm, LogoutButton } from '../LoginForm/LoginForm'
 import { TeamsManager } from '../TeamsManager/TeamsManager'
 import { MatchesManager } from '../MatchesManager/MatchesManager'
@@ -13,6 +13,11 @@ export function AdminPage() {
   const [tab, setTab] = useState<Tab>('teams')
 
   function refresh() {
+    // No token stored → definitely logged out; skip the guaranteed-401 round-trip.
+    if (!getToken()) {
+      setAuthed(false)
+      return
+    }
     getSession()
       .then((s) => setAuthed(s.authenticated))
       .catch(() => setAuthed(false))
@@ -45,7 +50,11 @@ export function AdminPage() {
         </button>
       </nav>
 
-      {tab === 'teams' ? <TeamsManager /> : <MatchesManager />}
+      {tab === 'teams' ? (
+        <TeamsManager onAuthLost={() => setAuthed(false)} />
+      ) : (
+        <MatchesManager onAuthLost={() => setAuthed(false)} />
+      )}
     </div>
   )
 }

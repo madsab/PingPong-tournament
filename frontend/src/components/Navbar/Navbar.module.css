@@ -1,0 +1,45 @@
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0.75rem clamp(1rem, 3vw, 2rem);
+}
+
+.brand {
+  font-weight: var(--fw-score);
+  color: var(--color-text);
+  letter-spacing: 0.02em;
+}
+
+.links {
+  display: flex;
+  gap: 0.5rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.link,
+.linkActive {
+  display: inline-block;
+  padding: 0.4rem 0.9rem;
+  border-radius: 999px;
+  text-decoration: none;
+  font-weight: var(--fw-label);
+  color: var(--color-ash);
+  border: 1px solid transparent;
+}
+
+.link:hover {
+  color: var(--color-text);
+  border-color: var(--color-hairline);
+}
+
+.linkActive {
+  color: var(--color-text);
+  background: var(--grad-heat);
+}

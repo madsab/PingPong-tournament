@@ -7,8 +7,17 @@ teams, and the individual games that make up a match. See data-model.md.
 from __future__ import annotations
 
 import enum
+from datetime import datetime
 
-from sqlalchemy import CheckConstraint, Enum, ForeignKey, String
+from sqlalchemy import (
+    CheckConstraint,
+    DateTime,
+    Enum,
+    ForeignKey,
+    String,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
@@ -58,6 +67,10 @@ class Match(Base):
         default=MatchStatus.scheduled,
         nullable=False,
     )
+    # When the result was recorded (F13). Null while scheduled. Used by the fantasy
+    # feature (007) to only credit CompuBucks for games played after a player was
+    # picked. Naive UTC, to match the func.now() defaults elsewhere.
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     team_a: Mapped[Team] = relationship(foreign_keys=[team_a_id])
     team_b: Mapped[Team] = relationship(foreign_keys=[team_b_id])
@@ -91,3 +104,61 @@ class Game(Base):
     )
 
     match: Mapped[Match] = relationship(back_populates="games")
+
+
+class FantasyUser(Base):
+    """A person playing the fantasy game (feature 007).
+
+    The name is the identity — there is no password (fun, low-stakes feature). We
+    keep the name as typed for display and a lowercased/trimmed ``name_key`` with a
+    UNIQUE constraint so "Alice" and " alice " resolve to the same account without
+    relying on a database-specific case-insensitive collation.
+    """
+
+    __tablename__ = "fantasy_users"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    name_key: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    fun_fact: Mapped[str] = mapped_column(String(280), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), nullable=False
+    )
+
+    slots: Mapped[list[FantasySlot]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
+
+
+class FantasySlot(Base):
+    """One filled slot on a fantasy user's team: a real Member in box 1-4.
+
+    An empty slot is simply the absence of a row. Two unique constraints enforce the
+    rules at the database level (defence behind the API validation): one player per
+    box, and no duplicate player on the same team. If an admin deletes a Member, the
+    slot row is removed (CASCADE) and that box goes empty.
+    """
+
+    __tablename__ = "fantasy_slots"
+    __table_args__ = (
+        UniqueConstraint("user_id", "slot_index", name="one_player_per_slot"),
+        UniqueConstraint("user_id", "member_id", name="no_duplicate_player"),
+        CheckConstraint("slot_index BETWEEN 1 AND 4", name="slot_index_1_to_4"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("fantasy_users.id", ondelete="CASCADE"), nullable=False
+    )
+    slot_index: Mapped[int] = mapped_column(nullable=False)
+    member_id: Mapped[int] = mapped_column(
+        ForeignKey("members.id", ondelete="CASCADE"), nullable=False
+    )
+    # When this player was placed in the slot. CompuBucks only counts games played
+    # after this moment (§scoring); swapping a player resets it (see assign_slot).
+    added_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), nullable=False
+    )
+
+    user: Mapped[FantasyUser] = relationship(back_populates="slots")
+    member: Mapped[Member] = relationship()

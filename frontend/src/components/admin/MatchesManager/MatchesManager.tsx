@@ -14,7 +14,7 @@ import styles from './MatchesManager.module.css'
 
 // Manage matches: generate the round-robin (F11), create/delete by hand (F10),
 // and record results (F12).
-export function MatchesManager() {
+export function MatchesManager({ onAuthLost }: { onAuthLost?: () => void }) {
   const [teams, setTeams] = useState<Team[]>([])
   const [matches, setMatches] = useState<Match[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -22,6 +22,16 @@ export function MatchesManager() {
   const [recording, setRecording] = useState<number | null>(null)
   const [aId, setAId] = useState<number | ''>('')
   const [bId, setBId] = useState<number | ''>('')
+
+  // A 401 means our token is no longer valid — send the user back to the login gate
+  // instead of showing an inline error. Returns true if it handled the error.
+  function handledAuthLoss(e: unknown): boolean {
+    if (e instanceof ApiError && e.status === 401) {
+      onAuthLost?.()
+      return true
+    }
+    return false
+  }
 
   function reload() {
     Promise.all([listTeams(), listMatches()])
@@ -40,6 +50,7 @@ export function MatchesManager() {
       await action()
       reload()
     } catch (e) {
+      if (handledAuthLoss(e)) return
       setError(e instanceof ApiError ? e.message : 'Something went wrong')
     }
   }
@@ -52,6 +63,7 @@ export function MatchesManager() {
       setNote(`Created ${res.created} match(es).`)
       reload()
     } catch (e) {
+      if (handledAuthLoss(e)) return
       setError(e instanceof ApiError ? e.message : 'Could not generate schedule')
     }
   }

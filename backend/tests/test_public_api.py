@@ -237,3 +237,32 @@ def test_matches_draw_reports_winner_draw(client, db_session):
 
     m = client.get("/api/matches").json()["matches"][0]
     assert m["result"]["winner"] == "draw"
+
+
+# --- GET /api/members (feature 007, US2 pick-list) -------------------------------
+
+def test_members_lists_all_players_ordered_by_team_then_name(client, db_session):
+    zeta = _make_team(db_session, "Zeta", logo_url="z.png")
+    alpha = _make_team(db_session, "Alpha")
+    _make_member(db_session, "Bob", zeta)
+    _make_member(db_session, "Ada", zeta)
+    _make_member(db_session, "Cara", alpha)
+    db_session.commit()
+
+    resp = client.get("/api/members")
+    assert resp.status_code == 200  # no login required
+    members = resp.json()["members"]
+    # Ordered by team name (Alpha before Zeta), then player name.
+    assert [(m["name"], m["team_name"]) for m in members] == [
+        ("Cara", "Alpha"),
+        ("Ada", "Zeta"),
+        ("Bob", "Zeta"),
+    ]
+    ada = next(m for m in members if m["name"] == "Ada")
+    assert ada["team_id"] == zeta.id
+    assert ada["team_logo_url"] == "z.png"
+    assert isinstance(ada["id"], int)
+
+
+def test_members_empty_when_no_players(client):
+    assert client.get("/api/members").json() == {"members": []}

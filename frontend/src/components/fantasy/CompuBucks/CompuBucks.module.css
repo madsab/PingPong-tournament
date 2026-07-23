@@ -1,0 +1,29 @@
+.wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.9rem;
+  border-radius: 999px;
+  background: var(--color-char);
+  border: 1px solid var(--color-hairline);
+}
+
+.coin {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+}
+
+.amount {
+  font-weight: var(--fw-score);
+  font-size: 1.1rem;
+  color: var(--color-text);
+}
+
+.unit {
+  font-weight: var(--fw-label);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-ash);
+}

@@ -57,7 +57,12 @@ def admin_password(monkeypatch):
 
 @pytest.fixture()
 def admin_client(client, admin_password):
-    """A client that is already logged into the admin area."""
+    """A client that is already logged into the admin area.
+
+    Login returns a Bearer token; we set it as a default header so every later
+    request in the test is authenticated (no cookies involved).
+    """
     resp = client.post("/api/admin/login", json={"password": admin_password})
     assert resp.status_code == 200
+    client.headers.update({"Authorization": f"Bearer {resp.json()['token']}"})
     return client

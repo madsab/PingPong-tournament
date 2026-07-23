@@ -5,14 +5,26 @@ this script gives the public page something to show. Run it once:
 
     python -m app.seed
 
-It creates the tables if needed, then fills an empty database. If teams already
-exist it does nothing, so it's safe to run twice.
+The schema is owned by Alembic migrations, so make sure they've run first
+(`alembic upgrade head` — the backend container does this on startup). This script
+then fills an empty database; if teams already exist it does nothing, so it's safe
+to run twice.
 """
 
 from __future__ import annotations
 
-from app.db import Base, SessionLocal, engine
-from app.models import Game, Match, MatchStatus, Member, Team
+from datetime import datetime
+
+from app.db import SessionLocal
+from app.models import (
+    FantasySlot,
+    FantasyUser,
+    Game,
+    Match,
+    MatchStatus,
+    Member,
+    Team,
+)
 
 # A tiny self-contained SVG logo (a coloured disc with initials) so the demo shows
 # real logos without needing any network/hosted image. Admins normally paste a URL.
@@ -52,7 +64,7 @@ SCHEDULED_MATCHES = [
 
 
 def seed() -> None:
-    Base.metadata.create_all(engine)
+    # Tables are created by migrations (`alembic upgrade head`), not here.
     db = SessionLocal()
     try:
         if db.query(Team).count() > 0:
@@ -73,6 +85,9 @@ def seed() -> None:
                 team_a_id=team_a.id,
                 team_b_id=team_b.id,
                 status=MatchStatus.completed,
+                # Fixed demo date. The demo fantasy manager's picks are dated a day
+                # earlier (see below) so these games count toward their CompuBucks.
+                completed_at=datetime(2026, 7, 20),
             )
             # Pair members up game-by-game, repeating the smaller team's roster to
             # cover the extra opponents (§3.2), so seeded games carry valid pairings.
@@ -96,10 +111,27 @@ def seed() -> None:
                 )
             )
 
+        db.flush()
+
+        # A demo fantasy player (feature 007) with a couple of picks so /fantasy
+        # shows a populated team and some CompuBucks straight after seeding.
+        picks = [
+            teams["Spin Doctors"].members[0],  # Ada — plenty of real wins
+            teams["Paddle Battle"].members[0],  # Dan
+        ]
+        demo = FantasyUser(name="Demo Manager", name_key="demo manager", fun_fact="Once served an ace with my eyes closed.")
+        # Picked a day before the seeded games (2026-07-20) so those wins count.
+        demo.slots = [
+            FantasySlot(slot_index=i + 1, member_id=m.id, added_at=datetime(2026, 7, 19))
+            for i, m in enumerate(picks)
+        ]
+        db.add(demo)
+
         db.commit()
         print(
             f"Seeded {len(TEAMS)} teams, {len(MATCHES)} completed "
-            f"and {len(SCHEDULED_MATCHES)} scheduled matches."
+            f"and {len(SCHEDULED_MATCHES)} scheduled matches, "
+            "plus a demo fantasy manager."
         )
     finally:
         db.close()

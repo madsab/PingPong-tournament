@@ -2,21 +2,28 @@ import { StandingsSection } from './components/StandingsSection/StandingsSection
 import { LeaderboardSection } from './components/LeaderboardSection/LeaderboardSection'
 import { ScheduleSection } from './components/ScheduleSection/ScheduleSection'
 import { AdminPage } from './components/admin/AdminPage/AdminPage'
+import { FantasyPage } from './components/fantasy/FantasyPage/FantasyPage'
+import { Navbar } from './components/Navbar/Navbar'
 import { useKeepAlive } from './hooks/useKeepAlive'
 
-// Only two routes exist, so a simple path check is enough (no router library yet).
+// A few routes exist, so a simple path check is enough (no router library yet).
 function App() {
-  // Ping the backend periodically so the free-tier host doesn't spin down. App is
-  // the always-mounted root for both '/' and '/admin', so this runs on every page.
-  useKeepAlive()
+  const path = window.location.pathname
 
-  const isAdmin = window.location.pathname.startsWith('/admin')
-
-  if (isAdmin) return <main><AdminPage /></main>
+  // Admin has no navbar (it's a separate, gated tool).
+  if (path.startsWith('/admin')) return <main><AdminPage /></main>
+  if (path.startsWith('/fantasy'))
+    return (
+      <main>
+        {/* <Navbar /> */}
+        <FantasyPage />
+      </main>
+    )
 
   // Public page sections in SPECIFICATIONS §4 order: standings, leaderboard, schedule.
   return (
     <main>
+      <Navbar />
       <StandingsSection />
       <LeaderboardSection />
       <ScheduleSection />

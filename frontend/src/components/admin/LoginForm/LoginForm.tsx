@@ -48,10 +48,10 @@ export function LoginForm({ onLoggedIn }: { onLoggedIn: () => void }) {
   )
 }
 
-// Ends the session (F7) — important on shared machines.
+// Logs out (F7) — drops the stored token, important on shared machines.
 export function LogoutButton({ onLoggedOut }: { onLoggedOut: () => void }) {
-  async function click() {
-    await logout()
+  function click() {
+    logout()
     onLoggedOut()
   }
   return (
