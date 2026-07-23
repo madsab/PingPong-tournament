@@ -4,7 +4,6 @@ import { ScheduleSection } from './components/ScheduleSection/ScheduleSection'
 import { AdminPage } from './components/admin/AdminPage/AdminPage'
 import { FantasyPage } from './components/fantasy/FantasyPage/FantasyPage'
 import { Navbar } from './components/Navbar/Navbar'
-import { useKeepAlive } from './hooks/useKeepAlive'
 
 // A few routes exist, so a simple path check is enough (no router library yet).
 function App() {
@@ -15,7 +14,7 @@ function App() {
   if (path.startsWith('/fantasy'))
     return (
       <main>
-        {/* <Navbar /> */}
+        <Navbar />
         <FantasyPage />
       </main>
     )
@@ -23,7 +22,7 @@ function App() {
   // Public page sections in SPECIFICATIONS §4 order: standings, leaderboard, schedule.
   return (
     <main>
-      <Navbar />
+      {/* <Navbar /> */}
       <StandingsSection />
       <LeaderboardSection />
       <ScheduleSection />
