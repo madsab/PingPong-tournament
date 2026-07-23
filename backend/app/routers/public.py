@@ -65,6 +65,7 @@ def get_members(db: Session = Depends(get_db)) -> MembersResponse:
             team_id=m.team_id,
             team_name=m.team.name,
             team_logo_url=m.team.logo_url,
+            price=m.price,
         )
         for m in members
     ]

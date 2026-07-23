@@ -1,26 +1,51 @@
-"""CompuBucks math for the fantasy league (feature 007).
+"""CompuBucks economy math for the fantasy league (feature 008).
 
 Pure functions, like ``standings.py``/``leaderboard.py``: they take plain objects
-(ORM rows or test stand-ins) and touch no database. CompuBucks is computed on read
-from the real games the chosen players actually played — never stored.
+(ORM rows or test stand-ins) and touch no database. The *balance* itself is banked on
+``FantasyUser`` (feature 008 replaced the 007 compute-on-read total). What lives here is
+the per-match scoring rule that ``settlement.py`` applies when the admin records a
+result, plus the money constants used across the feature.
 
-Scoring rule (v1): +10 for each game a slot's player *wins*, counted only for
-matches completed AFTER that player was put in the slot. Each slot has its own
-clock, so swapping a player in restarts their earning window. Losses earn nothing.
+Scoring rule (per real submatch = one game a picked player played):
+- win  → +5,000,000   (WIN_REWARD)
+- loss → -2,000,000   (LOSS_PENALTY)
+- Golden Racket on the player → both doubled (win +10,000,000, loss -4,000,000).
+- Booster on the player → +50% of the base win on their FIRST game in the match, on a
+  win only, then consumed. Does NOT stack with the racket.
+- The balance can never go below 0 (applied by the caller via ``clamp0``).
 
 Expected shapes (duck-typed):
-- slot:  .member_id, .added_at (datetime the player was placed in the slot)
-- match: .status, .completed_at (datetime or None), .games
-- game:  .team_a_score, .team_b_score, .member_a_id, .member_b_id
+- slot: .member_id, .has_racket (bool), .booster_active (bool)
+- game: .team_a_score, .team_b_score, .member_a_id, .member_b_id
 """
 
 from __future__ import annotations
 
-BUCKS_PER_WIN = 10
+# --- Money constants (single source of truth, feature 008) -----------------------
+STARTING_BALANCE = 100_000_000
+WIN_REWARD = 5_000_000
+LOSS_PENALTY = 2_000_000
+RACKET_MULTIPLIER = 2
+BOOSTER_WIN_BONUS = 0.5  # of the base win, on a win only
+SELL_RATE = 0.85  # sell = floor(0.85 * price_paid)
+DEFAULT_BOOSTER_PRICE = 1_000_000
+
+# The flat extra a Booster adds on a winning game (kept integer).
+BOOSTER_BONUS_AMOUNT = int(WIN_REWARD * BOOSTER_WIN_BONUS)
 
 
-def _is_completed(match) -> bool:
-    return str(getattr(match.status, "value", match.status)) == "completed"
+def clamp0(balance: int) -> int:
+    """The balance can never be negative (FR-013)."""
+    return max(0, balance)
+
+
+def sell_value(price_paid: int) -> int:
+    """What selling a player returns: 85% of what was paid, rounded down (FR-008)."""
+    return int(price_paid * SELL_RATE)
+
+
+def _member_played(game, member_id: int) -> bool:
+    return game.member_a_id == member_id or game.member_b_id == member_id
 
 
 def _member_won(game, member_id: int) -> bool:
@@ -32,25 +57,35 @@ def _member_won(game, member_id: int) -> bool:
     return False
 
 
-def compute_compubucks(slots, matches) -> int:
-    """Total CompuBucks across a user's slots.
+def slot_match_delta(slot, games) -> tuple[int, bool]:
+    """CompuBucks a single slot earns/loses from one match, and whether its Booster
+    was consumed.
 
-    For each slot, count +10 per game its player won in matches completed after the
-    player was added to that slot. A player is unique per user (enforced elsewhere),
-    so iterating per slot never double-counts.
+    ``games`` is the match's games (in order). Returns ``(delta, booster_consumed)``.
+    The caller (``settlement.py``) has already checked this slot's player is eligible
+    for this match (bought before the match completed).
     """
-    completed = [
-        m
-        for m in matches
-        if _is_completed(m) and getattr(m, "completed_at", None) is not None
-    ]
+    member_id = slot.member_id
+    played = [g for g in games if _member_played(g, member_id)]
+    if not played:
+        # Player didn't feature in this match — nothing happens, Booster waits.
+        return 0, False
 
-    total = 0
-    for slot in slots:
-        for match in completed:
-            if match.completed_at <= slot.added_at:
-                continue  # played before this player joined the slot
-            for g in match.games:
-                if _member_won(g, slot.member_id):
-                    total += BUCKS_PER_WIN
-    return total
+    multiplier = RACKET_MULTIPLIER if slot.has_racket else 1
+
+    delta = 0
+    for g in played:
+        if _member_won(g, member_id):
+            delta += WIN_REWARD * multiplier
+        else:
+            delta -= LOSS_PENALTY * multiplier
+
+    booster_consumed = False
+    if slot.booster_active:
+        # The Booster applies to the player's FIRST game in this match, on a win only,
+        # and does not stack with the racket (FR-021/FR-022). It is then used up.
+        booster_consumed = True
+        if not slot.has_racket and _member_won(played[0], member_id):
+            delta += BOOSTER_BONUS_AMOUNT
+
+    return delta, booster_consumed

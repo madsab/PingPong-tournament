@@ -18,6 +18,9 @@ vi.mock('../../../api/admin', async () => {
     createMember: vi.fn(),
     renameMember: vi.fn(),
     deleteMember: vi.fn(),
+    updateMemberPrice: vi.fn(),
+    getBoosterPrice: vi.fn(),
+    setBoosterPrice: vi.fn(),
   }
 })
 
@@ -25,8 +28,11 @@ import {
   createMember,
   createTeam,
   deleteTeam,
+  getBoosterPrice,
   listTeams,
   renameTeam,
+  setBoosterPrice,
+  updateMemberPrice,
   updateTeamLogo,
 } from '../../../api/admin'
 
@@ -35,7 +41,7 @@ const TEAMS: Team[] = [
     id: 1,
     name: 'Spin Doctors',
     logo_url: 'https://cdn.example/existing.png',
-    members: [{ id: 10, name: 'Ann', team_id: 1 }],
+    members: [{ id: 10, name: 'Ann', team_id: 1, price: null }],
   },
 ]
 
@@ -48,6 +54,9 @@ describe('TeamsManager', () => {
     vi.mocked(updateTeamLogo).mockResolvedValue(TEAMS[0])
     vi.mocked(deleteTeam).mockResolvedValue(undefined)
     vi.mocked(createMember).mockResolvedValue(TEAMS[0].members[0])
+    vi.mocked(updateMemberPrice).mockResolvedValue(TEAMS[0].members[0])
+    vi.mocked(getBoosterPrice).mockResolvedValue(1_000_000)
+    vi.mocked(setBoosterPrice).mockResolvedValue(2_000_000)
   })
 
   it('lists teams and their members', async () => {
@@ -117,5 +126,28 @@ describe('TeamsManager', () => {
     await userEvent.click(screen.getByRole('button', { name: /add member/i }))
 
     expect(createMember).toHaveBeenCalledWith('Ben', 1)
+  })
+
+  it('sets a member price (feature 008)', async () => {
+    render(<TeamsManager />)
+    await screen.findByDisplayValue('Spin Doctors')
+
+    await userEvent.type(screen.getByLabelText(/price for ann/i), '15000000')
+    await userEvent.click(screen.getByRole('button', { name: /save price/i }))
+
+    expect(updateMemberPrice).toHaveBeenCalledWith(10, 15000000)
+  })
+
+  it('saves the booster price setting', async () => {
+    render(<TeamsManager />)
+    // The setting loads its current value first.
+    await waitFor(() => expect(getBoosterPrice).toHaveBeenCalled())
+
+    const input = screen.getByLabelText(/^booster price$/i)
+    await userEvent.clear(input)
+    await userEvent.type(input, '2000000')
+    await userEvent.click(screen.getByRole('button', { name: /save booster price/i }))
+
+    expect(setBoosterPrice).toHaveBeenCalledWith(2000000)
   })
 })

@@ -15,6 +15,8 @@ from __future__ import annotations
 
 from datetime import datetime
 
+from sqlalchemy import select
+
 from app.db import SessionLocal
 from app.models import (
     FantasySlot,
@@ -25,6 +27,7 @@ from app.models import (
     Member,
     Team,
 )
+from app.settlement import settle_match
 
 # A tiny self-contained SVG logo (a coloured disc with initials) so the demo shows
 # real logos without needing any network/hosted image. Admins normally paste a URL.
@@ -38,12 +41,17 @@ def _demo_logo(initials: str, colour: str) -> str:
     return "data:image/svg+xml;utf8," + svg
 
 
-# (name, logo_url, [member names]) — a couple of teams carry a demo logo.
+# (name, logo_url, [(member name, CompuBucks price)]) — good players cost more
+# (feature 008). A couple of teams carry a demo logo.
 TEAMS = [
-    ("Spin Doctors", _demo_logo("SD", "crimson"), ["Ada", "Ben", "Cara"]),
-    ("Paddle Battle", _demo_logo("PB", "orangered"), ["Dan", "Eve"]),
-    ("Net Ninjas", None, ["Finn", "Gina", "Hugo"]),
-    ("Table Titans", None, ["Ivy", "Jack"]),
+    ("Spin Doctors", _demo_logo("SD", "crimson"),
+     [("Ada", 30_000_000), ("Ben", 18_000_000), ("Cara", 12_000_000)]),
+    ("Paddle Battle", _demo_logo("PB", "orangered"),
+     [("Dan", 25_000_000), ("Eve", 15_000_000)]),
+    ("Net Ninjas", None,
+     [("Finn", 20_000_000), ("Gina", 16_000_000), ("Hugo", 10_000_000)]),
+    ("Table Titans", None,
+     [("Ivy", 22_000_000), ("Jack", 14_000_000)]),
 ]
 
 # (team_a name, team_b name, [(a_score, b_score), ...]) — all completed.
@@ -74,7 +82,7 @@ def seed() -> None:
         teams: dict[str, Team] = {}
         for name, logo_url, members in TEAMS:
             team = Team(name=name, logo_url=logo_url)
-            team.members = [Member(name=m) for m in members]
+            team.members = [Member(name=n, price=p) for n, p in members]
             db.add(team)
             teams[name] = team
         db.flush()  # assign ids
@@ -113,25 +121,44 @@ def seed() -> None:
 
         db.flush()
 
-        # A demo fantasy player (feature 007) with a couple of picks so /fantasy
-        # shows a populated team and some CompuBucks straight after seeding.
+        # A demo fantasy manager (feature 008) who has BOUGHT a couple of players, so
+        # /fantasy shows a populated, paid-for team with a balance and earnings.
         picks = [
             teams["Spin Doctors"].members[0],  # Ada — plenty of real wins
             teams["Paddle Battle"].members[0],  # Dan
         ]
-        demo = FantasyUser(name="Demo Manager", name_key="demo manager", fun_fact="Once served an ace with my eyes closed.")
-        # Picked a day before the seeded games (2026-07-20) so those wins count.
+        spent = sum(m.price for m in picks)
+        demo = FantasyUser(
+            name="Demo Manager",
+            name_key="demo manager",
+            fun_fact="Once served an ace with my eyes closed.",
+            balance=100_000_000 - spent,  # what's left after buying the squad
+        )
+        # Bought a day before the seeded games (2026-07-20) so those wins/losses count.
         demo.slots = [
-            FantasySlot(slot_index=i + 1, member_id=m.id, added_at=datetime(2026, 7, 19))
+            FantasySlot(
+                slot_index=i + 1,
+                member_id=m.id,
+                price_paid=m.price,
+                added_at=datetime(2026, 7, 19),
+            )
             for i, m in enumerate(picks)
         ]
         db.add(demo)
-
         db.commit()
+
+        # Realize the seeded matches' CompuBucks into the demo manager's balance, the
+        # same way the admin "record result" endpoint does in the running app.
+        completed = db.scalars(
+            select(Match).where(Match.status == MatchStatus.completed)
+        ).all()
+        for match in completed:
+            settle_match(db, match)
+
         print(
             f"Seeded {len(TEAMS)} teams, {len(MATCHES)} completed "
             f"and {len(SCHEDULED_MATCHES)} scheduled matches, "
-            "plus a demo fantasy manager."
+            "plus a demo fantasy manager with a bought squad."
         )
     finally:
         db.close()

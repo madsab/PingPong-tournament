@@ -19,9 +19,9 @@ const teamA: Team = {
   name: 'A',
   logo_url: null,
   members: [
-    { id: 11, name: 'Ann', team_id: 1 },
-    { id: 12, name: 'Amy', team_id: 1 },
-    { id: 13, name: 'Al', team_id: 1 },
+    { id: 11, name: 'Ann', team_id: 1, price: null },
+    { id: 12, name: 'Amy', team_id: 1, price: null },
+    { id: 13, name: 'Al', team_id: 1, price: null },
   ],
 }
 const teamB: Team = {
@@ -29,8 +29,8 @@ const teamB: Team = {
   name: 'B',
   logo_url: null,
   members: [
-    { id: 21, name: 'Bob', team_id: 2 },
-    { id: 22, name: 'Ben', team_id: 2 },
+    { id: 21, name: 'Bob', team_id: 2, price: null },
+    { id: 22, name: 'Ben', team_id: 2, price: null },
   ],
 }
 const match: Match = {

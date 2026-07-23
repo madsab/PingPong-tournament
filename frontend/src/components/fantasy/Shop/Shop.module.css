@@ -1,0 +1,72 @@
+.shop {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.9rem 1rem;
+  margin-top: 1.5rem;
+  background: var(--color-char);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius);
+}
+
+.icon {
+  flex: none;
+  width: 2.4rem;
+  height: 2.4rem;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  font-size: 1.2rem;
+  background: radial-gradient(circle at 30% 30%, #ffb066, var(--color-flame));
+  box-shadow: 0 0 10px rgba(255, 106, 0, 0.6);
+}
+
+.text {
+  min-width: 0;
+  flex: 1;
+}
+
+.title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: var(--fw-name);
+}
+
+.hint {
+  margin: 0.15rem 0 0;
+  font-size: 0.8rem;
+  color: var(--color-ash);
+}
+
+.buy {
+  flex: none;
+  font: inherit;
+  font-weight: var(--fw-label);
+  padding: 0.5rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-flame);
+  background: rgba(255, 106, 0, 0.15);
+  color: var(--color-text);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.buy:hover:not(:disabled) {
+  background: var(--grad-heat);
+}
+
+.buy:disabled {
+  opacity: 0.5;
+  cursor: default;
+  border-color: var(--color-hairline);
+  background: transparent;
+}
+
+@media (max-width: 480px) {
+  .shop {
+    flex-wrap: wrap;
+  }
+  .buy {
+    width: 100%;
+  }
+}

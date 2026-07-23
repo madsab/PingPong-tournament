@@ -100,6 +100,7 @@ class MemberOut(BaseModel):
     id: int
     name: str
     team_id: int
+    price: int | None  # CompuBucks price; null = not pickable (feature 008)
 
 
 class TeamOut(BaseModel):
@@ -123,14 +124,33 @@ class TeamUpdate(BaseModel):
     logo_url: str | None = None
 
 
+def _non_negative_price(v: int | None) -> int | None:
+    """A player/booster price must be a whole number >= 0 (or null to clear it)."""
+    if v is not None and v < 0:
+        raise ValueError("price cannot be negative")
+    return v
+
+
 class MemberCreate(BaseModel):
     name: str
     team_id: int
+    price: int | None = None
+
+    @field_validator("price")
+    @classmethod
+    def _price(cls, v: int | None) -> int | None:
+        return _non_negative_price(v)
 
 
 class MemberUpdate(BaseModel):
     name: str | None = None
     team_id: int | None = None
+    price: int | None = None
+
+    @field_validator("price")
+    @classmethod
+    def _price(cls, v: int | None) -> int | None:
+        return _non_negative_price(v)
 
 
 class GameOut(BaseModel):
@@ -236,15 +256,42 @@ class FantasySlotOut(BaseModel):
     team_id: int | None
     team_name: str | None
     team_logo_url: str | None
+    # Economy fields (feature 008)
+    price_paid: int  # what the user paid for this player (0 when empty)
+    has_racket: bool  # Golden Racket on this player
+    booster_active: bool  # unused Booster placed on this player
 
 
 class FantasyTeamOut(BaseModel):
-    compubucks: int
+    balance: int  # banked CompuBucks, never < 0 (feature 008 replaced `compubucks`)
+    boosters_available: int  # bought-but-unplaced Boosters (0 or 1)
+    booster_price: int  # current shop price of a Booster
     slots: list[FantasySlotOut]  # always 4 entries, slot_index 1-4
 
 
 class SlotAssignRequest(BaseModel):
     member_id: int
+
+
+class SlotIndexRequest(BaseModel):
+    """Point the Golden Racket or a Booster at one of the four slots."""
+
+    slot_index: int
+
+
+class BoosterPriceOut(BaseModel):
+    booster_price: int
+
+
+class BoosterPriceUpdate(BaseModel):
+    booster_price: int
+
+    @field_validator("booster_price")
+    @classmethod
+    def _price(cls, v: int) -> int:
+        if v < 0:
+            raise ValueError("booster_price cannot be negative")
+        return v
 
 
 class PlayerOut(BaseModel):
@@ -253,6 +300,7 @@ class PlayerOut(BaseModel):
     team_id: int
     team_name: str
     team_logo_url: str | None
+    price: int | None  # CompuBucks price; null = not pickable (feature 008)
 
 
 class MembersResponse(BaseModel):

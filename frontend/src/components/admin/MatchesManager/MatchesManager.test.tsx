@@ -27,8 +27,8 @@ import {
 } from '../../../api/admin'
 
 const TEAMS: Team[] = [
-  { id: 1, name: 'A', logo_url: null, members: [{ id: 11, name: 'Ann', team_id: 1 }] },
-  { id: 2, name: 'B', logo_url: null, members: [{ id: 21, name: 'Bob', team_id: 2 }] },
+  { id: 1, name: 'A', logo_url: null, members: [{ id: 11, name: 'Ann', team_id: 1, price: null }] },
+  { id: 2, name: 'B', logo_url: null, members: [{ id: 21, name: 'Bob', team_id: 2, price: null }] },
 ]
 const MATCHES: Match[] = [
   { id: 5, team_a: { id: 1, name: 'A' }, team_b: { id: 2, name: 'B' }, status: 'scheduled', games: [] },

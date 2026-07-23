@@ -95,22 +95,22 @@
   color: var(--color-ash);
 }
 
-.taken {
+.note {
   margin-left: auto;
   font-size: 0.75rem;
+  font-weight: var(--fw-label);
+  white-space: nowrap;
+}
+
+.notePrice {
+  color: var(--color-flame);
+}
+
+.noteMuted {
   color: var(--color-ash);
 }
 
 .empty {
   color: var(--color-ash);
   padding: 0.5rem;
-}
-
-.clear {
-  padding: 0.5rem 0.9rem;
-  background: transparent;
-  color: var(--color-text);
-  border: 1px solid var(--color-hairline);
-  border-radius: 8px;
-  cursor: pointer;
 }

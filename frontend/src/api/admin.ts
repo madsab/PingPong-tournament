@@ -17,6 +17,7 @@ export interface Member {
   id: number
   name: string
   team_id: number
+  price: number | null // CompuBucks price; null = not pickable (feature 008)
 }
 
 export interface Team {
@@ -141,8 +142,28 @@ export const renameMember = (id: number, name: string) =>
     body: JSON.stringify({ name }),
   })
 
+// Set a player's CompuBucks price (feature 008). Pass null to clear it — a player
+// with no price can't be bought in the fantasy game.
+export const updateMemberPrice = (id: number, price: number | null) =>
+  request<Member>(`/api/admin/members/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({ price }),
+  })
+
 export const deleteMember = (id: number) =>
   request<void>(`/api/admin/members/${id}`, { method: 'DELETE' })
+
+// --- Booster price (fantasy shop, feature 008) ---
+export const getBoosterPrice = () =>
+  request<{ booster_price: number }>('/api/admin/settings/booster-price').then(
+    (r) => r.booster_price,
+  )
+
+export const setBoosterPrice = (price: number) =>
+  request<{ booster_price: number }>('/api/admin/settings/booster-price', {
+    method: 'PUT',
+    body: JSON.stringify({ booster_price: price }),
+  }).then((r) => r.booster_price)
 
 // --- Matches ---
 export const listMatches = () =>

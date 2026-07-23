@@ -10,13 +10,16 @@ import enum
 from datetime import datetime
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     DateTime,
     Enum,
     ForeignKey,
+    Integer,
     String,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -49,6 +52,9 @@ class Member(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     team_id: Mapped[int] = mapped_column(ForeignKey("teams.id", ondelete="CASCADE"))
+    # CompuBucks price to buy this player in the fantasy economy (feature 008).
+    # Null → the player has no price yet and cannot be picked. Set by the admin.
+    price: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     team: Mapped[Team] = relationship(back_populates="members")
 
@@ -124,6 +130,16 @@ class FantasyUser(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), nullable=False
     )
+    # The banked CompuBucks total (feature 008). Everyone starts at 100,000,000 and
+    # the balance moves with buys/sells and real submatch results. Never below 0.
+    balance: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=100_000_000, server_default=text("100000000")
+    )
+    # Bought-but-not-yet-placed Boosters (shop item). 0 or 1 in practice — a user
+    # holds at most one Booster at a time (spec assumption).
+    boosters_available: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default=text("0")
+    )
 
     slots: Mapped[list[FantasySlot]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
@@ -159,6 +175,62 @@ class FantasySlot(Base):
     added_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), nullable=False
     )
+    # What the user paid for the player now in this slot (feature 008). Selling
+    # returns 85% of this. Reset on every buy/swap; 0 when the slot is empty.
+    price_paid: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default=text("0")
+    )
+    # The Golden Ping Pong Racket sits on this player (doubles their win AND loss).
+    # At most one slot per user has this — enforced in the router (clear others).
+    has_racket: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("0")
+    )
+    # An unused one-time Booster is placed on this player (+50% on their next win).
+    # Consumed by settle_match after the player's next completed game.
+    booster_active: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("0")
+    )
 
     user: Mapped[FantasyUser] = relationship(back_populates="slots")
     member: Mapped[Member] = relationship()
+
+
+class Setting(Base):
+    """A single tunable global value, stored as key → integer (feature 008).
+
+    Currently holds only ``booster_price``. A tiny key/value table keeps one knob
+    out of the code without a bespoke table per setting.
+    """
+
+    __tablename__ = "settings"
+
+    key: Mapped[str] = mapped_column(String(50), primary_key=True)
+    value: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class FantasySettlement(Base):
+    """What one match paid one fantasy user (feature 008).
+
+    Game earnings are realized into ``FantasyUser.balance`` when the admin records a
+    match result. We store the *actual* balance change (post floor) so re-recording
+    the same match can reverse the old effect exactly and re-settle without ever
+    double-paying. ``consumed_booster_slot_index`` remembers which slot's Booster
+    this match used up, so a reversal can put it back.
+    """
+
+    __tablename__ = "fantasy_settlements"
+    __table_args__ = (
+        UniqueConstraint("user_id", "match_id", name="one_settlement_per_user_match"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("fantasy_users.id", ondelete="CASCADE"), nullable=False
+    )
+    match_id: Mapped[int] = mapped_column(
+        ForeignKey("matches.id", ondelete="CASCADE"), nullable=False
+    )
+    applied_delta: Mapped[int] = mapped_column(Integer, nullable=False)
+    consumed_booster_slot_index: Mapped[int | None] = mapped_column(
+        Integer, nullable=True
+    )

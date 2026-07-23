@@ -8,6 +8,13 @@
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
+  align-items: center;
+}
+
+.settingLabel {
+  font-size: 0.85rem;
+  font-weight: var(--fw-label);
+  color: var(--color-ash);
 }
 
 .input {

@@ -1,25 +1,31 @@
-"""Tests for the CompuBucks math (feature 007, §data-model).
+"""Tests for the CompuBucks economy math (feature 008, pure functions).
 
-Pure function like the standings math: it takes plain objects with the right
-attributes, so we build tiny stand-ins instead of touching the database.
+``slot_match_delta`` computes one slot's earn/lose for one match plus whether its
+Booster was consumed. Pure function like the standings math, so we build tiny
+stand-ins instead of touching the database.
 
-Rule (v1): +10 for each game a slot's player *wins*, counted only for matches
-completed AFTER that player was put in the slot (each slot has its own clock).
-Losses earn nothing.
+Rule: +5,000,000 per game won, -2,000,000 per game lost. Golden Racket doubles both.
+A Booster adds +50% of the base win on the player's FIRST game (win only), then is
+consumed. Booster does not stack with the racket.
 """
 
-from datetime import datetime
 from types import SimpleNamespace
 
-from app.fantasy import BUCKS_PER_WIN, compute_compubucks
+from app.fantasy import (
+    BOOSTER_BONUS_AMOUNT,
+    LOSS_PENALTY,
+    RACKET_MULTIPLIER,
+    WIN_REWARD,
+    clamp0,
+    sell_value,
+    slot_match_delta,
+)
 
-T0 = datetime(2026, 1, 1)  # a slot's "added" moment
-BEFORE = datetime(2025, 12, 31)  # match completed before the player was added
-AFTER = datetime(2026, 1, 2)  # match completed after the player was added
 
-
-def slot(member_id, added_at=T0):
-    return SimpleNamespace(member_id=member_id, added_at=added_at)
+def slot(member_id, has_racket=False, booster_active=False):
+    return SimpleNamespace(
+        member_id=member_id, has_racket=has_racket, booster_active=booster_active
+    )
 
 
 def game(a, b, member_a=None, member_b=None):
@@ -28,62 +34,101 @@ def game(a, b, member_a=None, member_b=None):
     )
 
 
-def match(games, completed_at=AFTER, status="completed"):
-    return SimpleNamespace(status=status, completed_at=completed_at, games=games)
+# --- base win/loss ---------------------------------------------------------------
+
+def test_win_earns_reward():
+    delta, consumed = slot_match_delta(slot(1), [game(11, 5, member_a=1, member_b=2)])
+    assert delta == WIN_REWARD
+    assert consumed is False
 
 
-def test_no_slots_earns_zero():
-    m = match([game(11, 5, member_a=1, member_b=2)])
-    assert compute_compubucks([], [m]) == 0
-
-
-def test_win_after_added_earns_ten():
-    m = match([game(11, 5, member_a=1, member_b=2)], completed_at=AFTER)
-    assert compute_compubucks([slot(1)], [m]) == BUCKS_PER_WIN
-
-
-def test_win_before_added_earns_nothing():
-    m = match([game(11, 5, member_a=1, member_b=2)], completed_at=BEFORE)
-    assert compute_compubucks([slot(1)], [m]) == 0
-
-
-def test_loss_earns_nothing_even_after_added():
-    # Member 1 (side A) loses; wins-only means no bucks.
-    m = match([game(5, 11, member_a=1, member_b=2)], completed_at=AFTER)
-    assert compute_compubucks([slot(1)], [m]) == 0
+def test_loss_costs_penalty():
+    delta, _ = slot_match_delta(slot(1), [game(5, 11, member_a=1, member_b=2)])
+    assert delta == -LOSS_PENALTY
 
 
 def test_side_b_win_counts():
-    m = match([game(5, 11, member_a=1, member_b=2)], completed_at=AFTER)
-    assert compute_compubucks([slot(2)], [m]) == BUCKS_PER_WIN
+    delta, _ = slot_match_delta(slot(2), [game(5, 11, member_a=1, member_b=2)])
+    assert delta == WIN_REWARD
 
 
-def test_scheduled_or_undated_match_earns_nothing():
-    scheduled = match([game(11, 0, member_a=1, member_b=2)], status="scheduled")
-    undated = match([game(11, 0, member_a=1, member_b=2)], completed_at=None)
-    assert compute_compubucks([slot(1)], [scheduled, undated]) == 0
+def test_player_not_in_match_earns_nothing():
+    delta, consumed = slot_match_delta(slot(99), [game(11, 5, member_a=1, member_b=2)])
+    assert delta == 0 and consumed is False
 
 
-def test_two_slots_have_independent_clocks():
-    # One game completed between the two slots' added times: only the earlier
-    # slot's player was on the team when it was played.
-    early = slot(1, added_at=datetime(2026, 1, 1))
-    late = slot(2, added_at=datetime(2026, 1, 10))
-    m = match(
+def test_multiple_games_sum():
+    games = [
+        game(11, 5, member_a=1, member_b=2),  # win
+        game(9, 11, member_a=1, member_b=2),  # loss
+    ]
+    delta, _ = slot_match_delta(slot(1), games)
+    assert delta == WIN_REWARD - LOSS_PENALTY
+
+
+# --- Golden Racket ---------------------------------------------------------------
+
+def test_racket_doubles_win():
+    delta, _ = slot_match_delta(
+        slot(1, has_racket=True), [game(11, 5, member_a=1, member_b=2)]
+    )
+    assert delta == WIN_REWARD * RACKET_MULTIPLIER
+
+
+def test_racket_doubles_loss():
+    delta, _ = slot_match_delta(
+        slot(1, has_racket=True), [game(5, 11, member_a=1, member_b=2)]
+    )
+    assert delta == -LOSS_PENALTY * RACKET_MULTIPLIER
+
+
+# --- Booster ---------------------------------------------------------------------
+
+def test_booster_adds_half_on_win_and_is_consumed():
+    delta, consumed = slot_match_delta(
+        slot(1, booster_active=True), [game(11, 5, member_a=1, member_b=2)]
+    )
+    assert delta == WIN_REWARD + BOOSTER_BONUS_AMOUNT  # 7,500,000
+    assert consumed is True
+
+
+def test_booster_gives_no_bonus_on_loss_but_is_consumed():
+    delta, consumed = slot_match_delta(
+        slot(1, booster_active=True), [game(5, 11, member_a=1, member_b=2)]
+    )
+    assert delta == -LOSS_PENALTY
+    assert consumed is True
+
+
+def test_booster_applies_to_first_game_only():
+    games = [
+        game(11, 5, member_a=1, member_b=2),  # win (boosted)
+        game(11, 9, member_a=1, member_b=2),  # win (not boosted)
+    ]
+    delta, consumed = slot_match_delta(slot(1, booster_active=True), games)
+    assert delta == (WIN_REWARD + BOOSTER_BONUS_AMOUNT) + WIN_REWARD
+    assert consumed is True
+
+
+def test_booster_does_not_stack_with_racket():
+    delta, consumed = slot_match_delta(
+        slot(1, has_racket=True, booster_active=True),
         [game(11, 5, member_a=1, member_b=2)],
-        completed_at=datetime(2026, 1, 5),
     )
-    # Member 1 was added before the game (counts, +10); member 2 lost anyway (0),
-    # and was added after the game (wouldn't count regardless).
-    assert compute_compubucks([early, late], [m]) == BUCKS_PER_WIN
+    # Racket amount only (10,000,000), no +50% booster bonus, but still consumed.
+    assert delta == WIN_REWARD * RACKET_MULTIPLIER
+    assert consumed is True
 
 
-def test_multiple_wins_sum():
-    m = match(
-        [
-            game(11, 5, member_a=1, member_b=2),
-            game(11, 9, member_a=1, member_b=2),
-        ],
-        completed_at=AFTER,
-    )
-    assert compute_compubucks([slot(1)], [m]) == 2 * BUCKS_PER_WIN
+# --- helpers ---------------------------------------------------------------------
+
+def test_clamp0_floors_at_zero():
+    assert clamp0(-5) == 0
+    assert clamp0(0) == 0
+    assert clamp0(7) == 7
+
+
+def test_sell_value_is_85_percent_rounded_down():
+    assert sell_value(20_000_000) == 17_000_000
+    assert sell_value(1) == 0  # floor(0.85)
+    assert sell_value(10) == 8  # floor(8.5)

@@ -8,11 +8,12 @@ describe('FantasyRules', () => {
     expect(screen.getByRole('note', { name: /fantasy-regler/i })).toBeInTheDocument()
   })
 
-  it('explains registration, the reward, and the after-you-add rule', () => {
+  it('explains the economy: start balance, buy/sell, win/loss, racket and booster', () => {
     render(<FantasyRules />)
-    expect(screen.getByText(/registrer deg med navnet ditt/i)).toBeInTheDocument()
-    expect(screen.getByText(/10 CompuBucks/)).toBeInTheDocument()
-    expect(screen.getByText(/kun/i)).toBeInTheDocument()
-    expect(screen.getByText(/starter klokka på nytt/i)).toBeInTheDocument()
+    expect(screen.getByText(/100 000 000 CompuBucks/)).toBeInTheDocument()
+    expect(screen.getByText(/85 %/)).toBeInTheDocument()
+    expect(screen.getByText(/\+5 000 000/)).toBeInTheDocument()
+    expect(screen.getByText(/gyllen racket/i)).toBeInTheDocument()
+    expect(screen.getByText(/booster/i)).toBeInTheDocument()
   })
 })

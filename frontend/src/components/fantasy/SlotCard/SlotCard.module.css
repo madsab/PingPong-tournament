@@ -1,21 +1,11 @@
 .card {
+  position: relative;
   width: 100%;
-  min-height: 5.5rem;
-  padding: 0.75rem;
   border-radius: var(--radius);
   background: var(--color-char);
   border: 1px solid var(--color-hairline);
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  cursor: pointer;
-  text-align: left;
   color: var(--color-text);
-  font: inherit;
-}
-
-.card:hover {
-  border-color: var(--color-flame);
+  overflow: hidden;
 }
 
 .filled {
@@ -24,9 +14,32 @@
 
 .empty {
   border-style: dashed;
+  color: var(--color-ash);
+}
+
+/* The player area — clickable to buy/replace. */
+.main {
+  width: 100%;
+  min-height: 5.5rem;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+}
+
+.empty .main {
   align-items: center;
   justify-content: center;
-  color: var(--color-ash);
+}
+
+.main:hover {
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .slotLabel {
@@ -46,6 +59,7 @@
 .playerText {
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .name {
@@ -58,6 +72,90 @@
   color: var(--color-ash);
 }
 
+/* The buy size, pushed to the right edge of the player row. */
+.price {
+  margin-left: auto;
+  font-weight: var(--fw-label);
+  font-size: 0.8rem;
+  color: var(--color-flame);
+  white-space: nowrap;
+}
+
 .add {
   font-weight: var(--fw-name);
+}
+
+/* Controls row (racket / booster / sell) shown only when filled. */
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding: 0 0.75rem 0.75rem;
+}
+
+.chip,
+.sell {
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: var(--fw-label);
+  padding: 0.3rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-hairline);
+  background: transparent;
+  color: var(--color-ash);
+  cursor: pointer;
+}
+
+.chip:hover {
+  border-color: var(--color-flame);
+  color: var(--color-text);
+}
+
+/* Active Golden Racket — its own gold, kept distinct from the champion-only
+   --color-gold token (the same rule the CompuBucks coin follows). */
+.chipOn {
+  border-color: #e6b422;
+  color: #1a1206;
+  background: linear-gradient(135deg, #ffd76a, #e6a417);
+}
+
+/* Active Booster — arena orange heat. */
+.chipBoost {
+  border-color: var(--color-flame);
+  color: var(--color-text);
+  background: rgba(255, 106, 0, 0.22);
+}
+
+.sell:hover {
+  border-color: var(--color-ember);
+  color: var(--color-ember);
+}
+
+/* Corner badges — the two signature marks. */
+.racketBadge,
+.boosterBadge {
+  position: absolute;
+  width: 1.6rem;
+  height: 1.6rem;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+/* Golden Racket: bottom-right corner, per the spec. */
+.racketBadge {
+  right: 0.5rem;
+  bottom: 0.5rem;
+  background: radial-gradient(circle at 30% 30%, #ffe08a, #e6a417);
+  box-shadow: 0 0 0 2px #e6b422, 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+
+/* Booster: top-right corner, orange heat glow. */
+.boosterBadge {
+  right: 0.5rem;
+  top: 0.5rem;
+  background: radial-gradient(circle at 30% 30%, #ffb066, var(--color-flame));
+  box-shadow: 0 0 8px rgba(255, 106, 0, 0.7);
 }

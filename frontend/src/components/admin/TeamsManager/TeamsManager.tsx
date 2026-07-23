@@ -5,9 +5,12 @@ import {
   createTeam,
   deleteMember,
   deleteTeam,
+  getBoosterPrice,
   listTeams,
   renameMember,
   renameTeam,
+  setBoosterPrice,
+  updateMemberPrice,
   updateTeamLogo,
   type Team,
 } from '../../../api/admin'
@@ -55,6 +58,8 @@ export function TeamsManager({ onAuthLost }: { onAuthLost?: () => void }) {
 
   return (
     <section className={styles.wrap}>
+      <BoosterPriceSetting onChange={run} />
+
       <form onSubmit={addTeam} className={styles.addRow}>
         <input
           aria-label="New team name"
@@ -87,6 +92,44 @@ export function TeamsManager({ onAuthLost }: { onAuthLost?: () => void }) {
         ))}
       </ul>
     </section>
+  )
+}
+
+// The one global economy knob (feature 008): what a Booster costs in the shop.
+function BoosterPriceSetting({
+  onChange,
+}: {
+  onChange: (action: () => Promise<unknown>) => void
+}) {
+  const [price, setPrice] = useState('')
+
+  useEffect(() => {
+    getBoosterPrice()
+      .then((p) => setPrice(String(p)))
+      .catch(() => {})
+  }, [])
+
+  return (
+    <div className={styles.addRow}>
+      <label className={styles.settingLabel} htmlFor="booster-price">
+        Booster price (CompuBucks)
+      </label>
+      <input
+        id="booster-price"
+        type="number"
+        min="0"
+        aria-label="Booster price"
+        value={price}
+        onChange={(e) => setPrice(e.target.value)}
+        className={styles.input}
+      />
+      <button
+        className={styles.secondary}
+        onClick={() => onChange(() => setBoosterPrice(Number(price)))}
+      >
+        Save booster price
+      </button>
+    </div>
   )
 }
 
@@ -142,7 +185,13 @@ function TeamCard({
 
       <ul className={styles.memberList}>
         {team.members.map((m) => (
-          <MemberRow key={m.id} name={m.name} id={m.id} onChange={onChange} />
+          <MemberRow
+            key={m.id}
+            name={m.name}
+            id={m.id}
+            price={m.price}
+            onChange={onChange}
+          />
         ))}
       </ul>
 
@@ -173,13 +222,16 @@ function TeamCard({
 function MemberRow({
   id,
   name,
+  price,
   onChange,
 }: {
   id: number
   name: string
+  price: number | null
   onChange: (action: () => Promise<unknown>) => void
 }) {
   const [value, setValue] = useState(name)
+  const [priceValue, setPriceValue] = useState(price === null ? '' : String(price))
   return (
     <li className={styles.memberRow}>
       <input
@@ -188,11 +240,30 @@ function MemberRow({
         onChange={(e) => setValue(e.target.value)}
         className={styles.input}
       />
+      <input
+        type="number"
+        min="0"
+        aria-label={`Price for ${name}`}
+        placeholder="Price (blank = not for sale)"
+        value={priceValue}
+        onChange={(e) => setPriceValue(e.target.value)}
+        className={styles.input}
+      />
       <button
         className={styles.secondary}
         onClick={() => onChange(() => renameMember(id, value))}
       >
         Save
+      </button>
+      <button
+        className={styles.secondary}
+        onClick={() =>
+          onChange(() =>
+            updateMemberPrice(id, priceValue.trim() === '' ? null : Number(priceValue)),
+          )
+        }
+      >
+        Save price
       </button>
       <button
         className={styles.danger}

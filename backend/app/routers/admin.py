@@ -17,6 +17,8 @@ from app import auth
 from app.db import get_db
 from app.models import Game, Match, MatchStatus, Member, Team
 from app.schemas import (
+    BoosterPriceOut,
+    BoosterPriceUpdate,
     GenerateScheduleResponse,
     LoginRequest,
     LoginResponse,
@@ -35,6 +37,8 @@ from app.schemas import (
     TeamUpdate,
 )
 from app.schedule import missing_pairings
+from app.settings_store import get_booster_price, set_booster_price
+from app.settlement import settle_match
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -68,7 +72,7 @@ _guarded = APIRouter(dependencies=[Depends(auth.require_admin)])
 
 
 def _member_out(m: Member) -> MemberOut:
-    return MemberOut(id=m.id, name=m.name, team_id=m.team_id)
+    return MemberOut(id=m.id, name=m.name, team_id=m.team_id, price=m.price)
 
 
 def _team_out(t: Team) -> TeamOut:
@@ -171,7 +175,7 @@ def delete_team(team_id: int, db: Session = Depends(get_db)) -> Response:
 @_guarded.post("/members", response_model=MemberOut, status_code=201)
 def create_member(body: MemberCreate, db: Session = Depends(get_db)) -> MemberOut:
     _get_team(db, body.team_id)  # 404 if the team is missing
-    member = Member(name=body.name, team_id=body.team_id)
+    member = Member(name=body.name, team_id=body.team_id, price=body.price)
     db.add(member)
     db.commit()
     db.refresh(member)
@@ -190,6 +194,10 @@ def update_member(
     if body.team_id is not None:
         _get_team(db, body.team_id)
         member.team_id = body.team_id
+    # `price` is nullable, so "provided as null" (clear the price) must be told apart
+    # from "not provided" — use the set of fields actually sent.
+    if "price" in body.model_fields_set:
+        member.price = body.price
     db.commit()
     db.refresh(member)
     return _member_out(member)
@@ -381,12 +389,30 @@ def record_result(
         for g in body.games
     ]
     match.status = MatchStatus.completed
-    # Stamp when the result was recorded so the fantasy feature (007) can credit
-    # CompuBucks only for games played after a player was picked. Naive UTC to match
-    # the func.now() defaults used elsewhere.
+    # Stamp when the result was recorded so the fantasy feature can credit CompuBucks
+    # only for games played after a player was picked. Naive UTC to match the
+    # func.now() defaults used elsewhere.
     match.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
     db.commit()
+
+    # Realize fantasy CompuBucks earnings for this match (feature 008). Idempotent —
+    # re-recording a result reverses the previous settlement and re-settles.
+    settle_match(db, _load_match(db, match_id))
     return _match_out(_load_match(db, match_id))
+
+
+# --- Booster price setting (F/008) -----------------------------------------------
+
+@_guarded.get("/settings/booster-price", response_model=BoosterPriceOut)
+def read_booster_price(db: Session = Depends(get_db)) -> BoosterPriceOut:
+    return BoosterPriceOut(booster_price=get_booster_price(db))
+
+
+@_guarded.put("/settings/booster-price", response_model=BoosterPriceOut)
+def write_booster_price(
+    body: BoosterPriceUpdate, db: Session = Depends(get_db)
+) -> BoosterPriceOut:
+    return BoosterPriceOut(booster_price=set_booster_price(db, body.booster_price))
 
 
 router.include_router(_guarded)

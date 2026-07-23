@@ -51,10 +51,15 @@ export interface FantasySlot {
   team_id: number | null
   team_name: string | null
   team_logo_url: string | null
+  price_paid: number
+  has_racket: boolean
+  booster_active: boolean
 }
 
 export interface FantasyTeam {
-  compubucks: number
+  balance: number
+  boosters_available: number
+  booster_price: number
   slots: FantasySlot[]
 }
 
@@ -64,6 +69,7 @@ export interface Player {
   team_id: number
   team_name: string
   team_logo_url: string | null
+  price: number | null // CompuBucks price; null = not for sale
 }
 
 // --- Auth & identity (US1) -------------------------------------------------------
@@ -114,4 +120,34 @@ export function clearSlot(slotIndex: number): Promise<FantasyTeam> {
 export async function fetchMembers(): Promise<Player[]> {
   const data = await request<{ members: Player[] }>('/api/members')
   return data.members
+}
+
+// --- Golden Racket (US4) ---------------------------------------------------------
+
+export function setRacket(slotIndex: number): Promise<FantasyTeam> {
+  return request<FantasyTeam>('/api/fantasy/team/racket', {
+    method: 'PUT',
+    body: JSON.stringify({ slot_index: slotIndex }),
+  })
+}
+
+export function clearRacket(): Promise<FantasyTeam> {
+  return request<FantasyTeam>('/api/fantasy/team/racket', { method: 'DELETE' })
+}
+
+// --- Booster shop (US5) ----------------------------------------------------------
+
+export function buyBooster(): Promise<FantasyTeam> {
+  return request<FantasyTeam>('/api/fantasy/shop/booster', { method: 'POST' })
+}
+
+export function placeBooster(slotIndex: number): Promise<FantasyTeam> {
+  return request<FantasyTeam>('/api/fantasy/team/booster', {
+    method: 'PUT',
+    body: JSON.stringify({ slot_index: slotIndex }),
+  })
+}
+
+export function removeBooster(): Promise<FantasyTeam> {
+  return request<FantasyTeam>('/api/fantasy/team/booster', { method: 'DELETE' })
 }
