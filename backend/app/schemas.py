@@ -249,6 +249,12 @@ class FantasyUserOut(BaseModel):
     fun_fact: str
 
 
+class FantasyAuthOut(FantasyUserOut):
+    # Register/login also hand back the token the frontend stores and sends as
+    # `Authorization: Bearer <token>` on every later call (no cookie involved).
+    token: str
+
+
 class FantasySlotOut(BaseModel):
     slot_index: int
     member_id: int | None

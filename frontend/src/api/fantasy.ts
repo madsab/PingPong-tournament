@@ -1,10 +1,20 @@
 // Talks to the Fantasy Ping Pong API (feature 007, see contracts/fantasy-api.md).
-// Sends the session cookie with `credentials: 'include'` — that cookie is what
-// "remembered across visits" relies on.
+// Auth is a Bearer token (not a cookie): register/login return a token, we keep it
+// in localStorage and send it in the `Authorization` header on every call. This
+// works on any device/browser — including iOS Safari, which blocks the cross-site
+// cookies this used to rely on. The stored token is what "remembered across visits"
+// now means.
 
 // Same base rule as public.ts/admin.ts: empty in production (same-origin via
 // Vercel's /api proxy), localhost backend in dev.
 const API_BASE = import.meta.env.VITE_API_BASE ?? (import.meta.env.DEV ? 'http://localhost:8000' : '')
+
+// Where we remember the fantasy token between visits.
+const TOKEN_KEY = 'pingpong.fantasy.token'
+
+export const getToken = () => localStorage.getItem(TOKEN_KEY)
+export const setToken = (token: string) => localStorage.setItem(TOKEN_KEY, token)
+export const clearToken = () => localStorage.removeItem(TOKEN_KEY)
 
 // Thrown when the backend rejects a request; carries the status so the UI can
 // react (e.g. a 404 on login means "no such name → offer to register").
@@ -17,12 +27,18 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const token = getToken()
   const res = await fetch(`${API_BASE}${path}`, {
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
     ...init,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...init?.headers,
+    },
   })
   if (!res.ok) {
+    // A stale/invalid token can never work again — drop it so the UI can re-gate.
+    if (res.status === 401) clearToken()
     let detail = `Request failed (${res.status})`
     try {
       const body = await res.json()
@@ -74,29 +90,33 @@ export interface Player {
 
 // --- Auth & identity (US1) -------------------------------------------------------
 
-export function register(name: string, funFact: string): Promise<FantasyUser> {
-  return request<FantasyUser>('/api/fantasy/register', {
+// Auth response also carries the token we store for later calls.
+type AuthResponse = FantasyUser & { token: string }
+
+export async function register(name: string, funFact: string): Promise<FantasyUser> {
+  const res = await request<AuthResponse>('/api/fantasy/register', {
     method: 'POST',
     body: JSON.stringify({ name, fun_fact: funFact }),
   })
+  setToken(res.token)
+  return res
 }
 
-export function login(name: string): Promise<FantasyUser> {
-  return request<FantasyUser>('/api/fantasy/login', {
+export async function login(name: string): Promise<FantasyUser> {
+  const res = await request<AuthResponse>('/api/fantasy/login', {
     method: 'POST',
     body: JSON.stringify({ name }),
   })
+  setToken(res.token)
+  return res
 }
 
 export function getMe(): Promise<FantasyUser> {
   return request<FantasyUser>('/api/fantasy/me')
 }
 
-export function logout(): Promise<{ authenticated: boolean }> {
-  return request<{ authenticated: boolean }>('/api/fantasy/logout', {
-    method: 'POST',
-  })
-}
+// Logging out is purely local — there's no server session to end, just drop the token.
+export const logout = () => clearToken()
 
 // --- Fantasy team (US2) ----------------------------------------------------------
 

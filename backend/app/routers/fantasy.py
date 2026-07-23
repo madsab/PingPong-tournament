@@ -1,9 +1,11 @@
 """Fantasy Ping Pong endpoints (feature 007).
 
-A lightweight, password-free identity: the name IS the account. We reuse the same
-signed session cookie as the admin area (Starlette ``SessionMiddleware``) but a
-separate ``fantasy_user_id`` key, so the two logins are independent. The cookie's
-default 14-day lifetime is what "remembered across visits" means here.
+A lightweight, password-free identity: the name IS the account. Auth is a **Bearer
+token** (like the admin area), not a cookie: register/login hand back a token that
+the frontend keeps in ``localStorage`` and sends in the ``Authorization`` header on
+every call. A token works on any device/browser — including iOS Safari, which blocks
+the cross-site cookies this used to rely on. "Remembered across visits" now means the
+token staying in ``localStorage``.
 
 Registration, login, the 4-slot team, and CompuBucks all live here. CompuBucks math
 is the pure ``app.fantasy`` module (computed on read, never stored).
@@ -17,16 +19,17 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
+from app.auth import make_fantasy_token, read_bearer_token, verify_fantasy_token
 from app.db import get_db
 from app.fantasy import sell_value
 from app.models import FantasySlot, FantasyUser, Member
 from app.schemas import (
+    FantasyAuthOut,
     FantasyLoginRequest,
     FantasyRegisterRequest,
     FantasySlotOut,
     FantasyTeamOut,
     FantasyUserOut,
-    SessionOut,
     SlotAssignRequest,
     SlotIndexRequest,
 )
@@ -42,17 +45,16 @@ def require_fantasy_user(
 ) -> FantasyUser:
     """Dependency: return the logged-in fantasy user or raise 401.
 
-    Reads ``fantasy_user_id`` from the session cookie. Refuses if there is no
-    session or the user no longer exists (e.g. the row was removed).
+    Reads the Bearer token from the ``Authorization`` header. Refuses if the token
+    is missing/invalid or the user no longer exists (e.g. the row was removed).
     """
-    user_id = request.session.get("fantasy_user_id")
+    user_id = verify_fantasy_token(read_bearer_token(request))
     if user_id is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Not logged in"
         )
     user = db.get(FantasyUser, user_id)
     if user is None:
-        request.session.pop("fantasy_user_id", None)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Not logged in"
         )
@@ -66,14 +68,14 @@ def _name_key(name: str) -> str:
 
 # --- Auth & identity (US1) -------------------------------------------------------
 
-@router.post("/register", response_model=FantasyUserOut, status_code=201)
+@router.post("/register", response_model=FantasyAuthOut, status_code=201)
 def register(
-    body: FantasyRegisterRequest, request: Request, db: Session = Depends(get_db)
-) -> FantasyUserOut:
+    body: FantasyRegisterRequest, db: Session = Depends(get_db)
+) -> FantasyAuthOut:
     """Create a new fantasy account (name + required fun-fact) and log in.
 
     The schema already trimmed and length-checked the input. Here we only guard the
-    name being taken (case/space-insensitive) and set the session.
+    name being taken (case/space-insensitive) and hand back a token.
     """
     key = _name_key(body.name)
     if db.scalar(select(FantasyUser).where(FantasyUser.name_key == key)):
@@ -83,35 +85,39 @@ def register(
     db.add(user)
     db.commit()
     db.refresh(user)
-    request.session["fantasy_user_id"] = user.id
-    return FantasyUserOut(id=user.id, name=user.name, fun_fact=user.fun_fact)
+    return FantasyAuthOut(
+        id=user.id,
+        name=user.name,
+        fun_fact=user.fun_fact,
+        token=make_fantasy_token(user.id),
+    )
 
 
-@router.post("/login", response_model=FantasyUserOut)
+@router.post("/login", response_model=FantasyAuthOut)
 def login(
-    body: FantasyLoginRequest, request: Request, db: Session = Depends(get_db)
-) -> FantasyUserOut:
+    body: FantasyLoginRequest, db: Session = Depends(get_db)
+) -> FantasyAuthOut:
     """Log in to an existing account by name only (no password, name is identity)."""
     user = db.scalar(
         select(FantasyUser).where(FantasyUser.name_key == _name_key(body.name))
     )
     if user is None:
         raise HTTPException(status_code=404, detail="No account with that name")
-    request.session["fantasy_user_id"] = user.id
-    return FantasyUserOut(id=user.id, name=user.name, fun_fact=user.fun_fact)
+    return FantasyAuthOut(
+        id=user.id,
+        name=user.name,
+        fun_fact=user.fun_fact,
+        token=make_fantasy_token(user.id),
+    )
 
 
 @router.get("/me", response_model=FantasyUserOut)
 def me(user: FantasyUser = Depends(require_fantasy_user)) -> FantasyUserOut:
-    """Return the currently logged-in fantasy user (used to decide login vs team)."""
+    """Return the currently logged-in fantasy user (used to decide login vs team).
+
+    There is no server logout: logging out is the frontend dropping its stored token.
+    """
     return FantasyUserOut(id=user.id, name=user.name, fun_fact=user.fun_fact)
-
-
-@router.post("/logout", response_model=SessionOut)
-def logout(request: Request) -> SessionOut:
-    """Forget the fantasy user on this device. Safe when already logged out."""
-    request.session.pop("fantasy_user_id", None)
-    return SessionOut(authenticated=False)
 
 
 # --- Fantasy team: 4 slots + CompuBucks (US2/US3) --------------------------------

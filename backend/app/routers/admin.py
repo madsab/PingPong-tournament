@@ -63,7 +63,7 @@ def login(body: LoginRequest) -> LoginResponse:
 @router.get("/session", response_model=SessionOut)
 def session_state(request: Request) -> SessionOut:
     """Tell the frontend whether the caller's Bearer token is currently valid."""
-    return SessionOut(authenticated=auth.verify_admin_token(auth._read_bearer(request)))
+    return SessionOut(authenticated=auth.verify_admin_token(auth.read_bearer_token(request)))
 
 
 # --- Guarded endpoints -----------------------------------------------------------

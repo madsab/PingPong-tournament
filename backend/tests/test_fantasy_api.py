@@ -29,9 +29,14 @@ def _seed_team(db, name="Paddlers", members=(("Ada", DEFAULT_PRICE), ("Bea", DEF
 
 
 def _register(client, name="Ivy", fun="hi"):
-    assert client.post(
+    """Register and log the client in by setting its default Bearer header."""
+    resp = client.post(
         "/api/fantasy/register", json={"name": name, "fun_fact": fun}
-    ).status_code == 201
+    )
+    assert resp.status_code == 201
+    token = resp.json()["token"]
+    client.headers.update({"Authorization": f"Bearer {token}"})
+    return token
 
 
 def _team(client):
@@ -64,7 +69,7 @@ def _completed_match(db, home, away, games, completed_at=AFTER):
     return m
 
 
-# --- US1: register, login, remembered session (unchanged from 007) ---------------
+# --- US1: register, login, remembered session (token-based since the iOS fix) ----
 
 def test_register_creates_account_and_logs_in(client):
     resp = client.post(
@@ -72,7 +77,10 @@ def test_register_creates_account_and_logs_in(client):
     )
     assert resp.status_code == 201
     assert resp.json()["name"] == "Alice"
-    me = client.get("/api/fantasy/me")
+    token = resp.json()["token"]
+    me = client.get(
+        "/api/fantasy/me", headers={"Authorization": f"Bearer {token}"}
+    )
     assert me.status_code == 200
     assert me.json()["name"] == "Alice"
 
@@ -100,20 +108,22 @@ def test_duplicate_name_is_case_and_space_insensitive(client):
 
 def test_login_existing_and_unknown(client):
     client.post("/api/fantasy/register", json={"name": "Cara", "fun_fact": "c"})
-    client.post("/api/fantasy/logout")
+    # A returning visitor logs in by name only and gets a fresh working token.
     ok = client.post("/api/fantasy/login", json={"name": " cara "})
     assert ok.status_code == 200 and ok.json()["name"] == "Cara"
+    assert ok.json()["token"]
     assert client.post("/api/fantasy/login", json={"name": "Nobody"}).status_code == 404
 
 
-def test_me_requires_session(client):
+def test_me_requires_token(client):
     assert client.get("/api/fantasy/me").status_code == 401
 
 
-def test_logout_clears_session(client):
-    client.post("/api/fantasy/register", json={"name": "Dan", "fun_fact": "d"})
+def test_dropping_the_token_logs_out(client):
+    # Logging out is client-side (drop the token); the server keeps no session.
+    _register(client, name="Dan", fun="d")
     assert client.get("/api/fantasy/me").status_code == 200
-    assert client.post("/api/fantasy/logout").status_code == 200
+    client.headers.pop("Authorization", None)
     assert client.get("/api/fantasy/me").status_code == 401
 
 
@@ -279,8 +289,16 @@ def test_record_result_endpoint_settles(admin_client, db_session):
     db_session.commit()
     db_session.refresh(match)
 
-    _register(admin_client)  # fantasy cookie coexists with the admin Bearer header
-    admin_client.put("/api/fantasy/team/slots/1", json={"member_id": ada.id})
+    # Admin and fantasy now both use a Bearer token, and one Authorization header
+    # can't be both — so keep the admin token as the client default (set by the
+    # fixture) and pass the fantasy token per-call.
+    reg = admin_client.post(
+        "/api/fantasy/register", json={"name": "Ivy", "fun_fact": "hi"}
+    )
+    fan = {"Authorization": f"Bearer {reg.json()['token']}"}
+    admin_client.put(
+        "/api/fantasy/team/slots/1", json={"member_id": ada.id}, headers=fan
+    )
 
     resp = admin_client.put(
         f"/api/admin/matches/{match.id}/result",
@@ -288,7 +306,8 @@ def test_record_result_endpoint_settles(admin_client, db_session):
                          "team_a_score": 11, "team_b_score": 5}]},
     )
     assert resp.status_code == 200
-    assert _team(admin_client)["balance"] == STARTING_BALANCE - DEFAULT_PRICE + 5_000_000
+    balance = admin_client.get("/api/fantasy/team", headers=fan).json()["balance"]
+    assert balance == STARTING_BALANCE - DEFAULT_PRICE + 5_000_000
 
 
 # --- US4: Golden Racket ----------------------------------------------------------

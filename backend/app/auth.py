@@ -87,7 +87,41 @@ def verify_admin_token(token: str | None) -> bool:
     return hmac.compare_digest(token, make_admin_token())
 
 
-def _read_bearer(request: Request) -> str | None:
+def make_fantasy_token(user_id: int) -> str:
+    """Return the token handed to a fantasy user on register/login.
+
+    Fantasy has per-user identities (the name is the account), so — unlike the one
+    shared admin token — this token carries *which* user it is: ``<id>.<sig>`` where
+    the signature is an HMAC of the id keyed by ``SESSION_SECRET``. We can verify it
+    later without storing anything server-side, and rotating ``SESSION_SECRET``
+    invalidates every issued token (a "log everyone out" lever). Sent in the
+    ``Authorization`` header, not a cookie, so it works on any device/browser —
+    including iOS Safari, which blocks cross-site cookies.
+    """
+    sig = hmac.new(
+        get_session_secret().encode(), f"fantasy:{user_id}".encode(), hashlib.sha256
+    ).hexdigest()
+    return f"{user_id}.{sig}"
+
+
+def verify_fantasy_token(token: str | None) -> int | None:
+    """Return the user id for a valid fantasy token, else ``None`` (constant-time).
+
+    Rejects a missing, malformed, or tampered token — including one whose id was
+    swapped for another user's, because the signature is bound to the id.
+    """
+    if not token:
+        return None
+    user_id_str, _, sig = token.partition(".")
+    if not sig or not user_id_str.isdigit():
+        return None
+    user_id = int(user_id_str)
+    if not hmac.compare_digest(token, make_fantasy_token(user_id)):
+        return None
+    return user_id
+
+
+def read_bearer_token(request: Request) -> str | None:
     """Pull the token out of an ``Authorization: Bearer <token>`` header, if present."""
     header = request.headers.get("authorization", "")
     scheme, _, token = header.partition(" ")
@@ -103,7 +137,7 @@ def require_admin(request: Request) -> None:
     Guards every admin endpoint except login/session. Refuses with 401 when the
     ``Authorization`` header is missing or its token doesn't match (F5 / FR-005).
     """
-    if not verify_admin_token(_read_bearer(request)):
+    if not verify_admin_token(read_bearer_token(request)):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Not authenticated",

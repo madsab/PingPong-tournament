@@ -6,7 +6,7 @@ import { FantasyRules } from '../FantasyRules/FantasyRules'
 import styles from './FantasyPage.module.css'
 
 // The /fantasy area (US1 gate). On load we ask the backend who we are: if the
-// session cookie is valid we go straight to the team, otherwise we show the login.
+// stored token is valid we go straight to the team, otherwise we show the login.
 export function FantasyPage() {
   const [user, setUser] = useState<FantasyUser | null | undefined>(undefined)
 
@@ -29,8 +29,8 @@ export function FantasyPage() {
   if (user === undefined) return <p className={styles.notice}>Loading…</p>
   if (user === null) return <FantasyLogin onLoggedIn={setUser} />
 
-  async function signOut() {
-    await logout()
+  function signOut() {
+    logout()
     setUser(null)
   }
 
