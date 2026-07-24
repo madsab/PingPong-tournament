@@ -17,14 +17,16 @@ const base: FantasySlot = {
 
 const noop = () => {}
 
-function renderCard(slot: FantasySlot) {
+function renderCard(slot: FantasySlot, saved = true) {
   render(
     <SlotCard
       slot={slot}
+      saved={saved}
       onOpen={noop}
       onToggleRacket={noop}
       onToggleBooster={noop}
       onSell={vi.fn()}
+      onRemove={vi.fn()}
     />,
   )
 }
@@ -32,16 +34,26 @@ function renderCard(slot: FantasySlot) {
 describe('SlotCard', () => {
   it('shows the Golden Racket badge only when the player holds it', () => {
     const { rerender } = render(
-      <SlotCard slot={base} onOpen={noop} onToggleRacket={noop} onToggleBooster={noop} onSell={noop} />,
+      <SlotCard
+        slot={base}
+        saved
+        onOpen={noop}
+        onToggleRacket={noop}
+        onToggleBooster={noop}
+        onSell={noop}
+        onRemove={noop}
+      />,
     )
     expect(screen.queryByLabelText('Golden Racket')).toBeNull()
     rerender(
       <SlotCard
         slot={{ ...base, has_racket: true }}
+        saved
         onOpen={noop}
         onToggleRacket={noop}
         onToggleBooster={noop}
         onSell={noop}
+        onRemove={noop}
       />,
     )
     expect(screen.getByLabelText('Golden Racket')).toBeInTheDocument()
@@ -61,5 +73,21 @@ describe('SlotCard', () => {
     })
     expect(screen.getByText(/buy a player/i)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /sell/i })).toBeNull()
+  })
+
+  it('a saved player shows the money controls (racket, booster, sell)', () => {
+    renderCard(base, true)
+    expect(screen.getByRole('button', { name: /racket/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /booster/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^sell$/i })).toBeInTheDocument()
+    expect(screen.queryByText(/unsaved/i)).toBeNull()
+  })
+
+  it('a draft (unsaved) pick shows Remove and an "unsaved" tag, not the money controls', () => {
+    renderCard(base, false)
+    expect(screen.getByText(/unsaved/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /remove/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^sell$/i })).toBeNull()
+    expect(screen.queryByRole('button', { name: /racket/i })).toBeNull()
   })
 })

@@ -17,6 +17,22 @@
   color: var(--color-ash);
 }
 
+/* A draft (unsaved) pick — dashed accent border so it reads as "not committed". */
+.draft {
+  border-style: dashed;
+  border-color: var(--color-flame);
+}
+
+.unsaved {
+  margin-left: 0.4rem;
+  padding: 0.05rem 0.35rem;
+  border-radius: 999px;
+  background: rgba(255, 106, 0, 0.18);
+  color: var(--color-flame);
+  letter-spacing: normal;
+  text-transform: none;
+}
+
 /* The player area — clickable to buy/replace. */
 .main {
   width: 100%;

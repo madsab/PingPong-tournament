@@ -4,10 +4,15 @@ import styles from './SlotCard.module.css'
 
 interface SlotCardProps {
   slot: FantasySlot
+  // Whether this player is already bought and banked on the server. A card that is
+  // filled but NOT saved is a draft pick — chosen locally, not yet paid for. Draft
+  // picks show a "Remove" (discard) control; saved players show the money controls.
+  saved: boolean
   onOpen: () => void
   onToggleRacket: () => void
   onToggleBooster: () => void
   onSell: () => void
+  onRemove: () => void
 }
 
 // Compact money for the tight card ("20M"). The full amounts live in the balance
@@ -18,24 +23,33 @@ const compact = new Intl.NumberFormat('en', {
 })
 
 // One fantasy player box. The player area is a button that opens the picker
-// (buy / replace). When filled, a row of controls handles the Golden Racket, the
-// Booster and selling, and two corner badges show which power-ups are active.
+// (buy / replace). A saved player shows the Golden Racket, Booster and Sell
+// controls plus corner badges; a draft (unsaved) pick shows only a Remove button
+// and an "unsaved" tag, because no money moves until the whole team is saved.
 export function SlotCard({
   slot,
+  saved,
   onOpen,
   onToggleRacket,
   onToggleBooster,
   onSell,
+  onRemove,
 }: SlotCardProps) {
   const filled = slot.member_id !== null
+  const draft = filled && !saved
 
   return (
     <div
-      className={`${styles.card} ${filled ? styles.filled : styles.empty}`}
+      className={`${styles.card} ${filled ? styles.filled : styles.empty} ${
+        draft ? styles.draft : ''
+      }`}
       data-testid={`slot-${slot.slot_index}`}
     >
       <button type="button" className={styles.main} onClick={onOpen}>
-        <span className={styles.slotLabel}>Player {slot.slot_index}</span>
+        <span className={styles.slotLabel}>
+          Player {slot.slot_index}
+          {draft && <span className={styles.unsaved}>unsaved</span>}
+        </span>
         {filled ? (
           <span className={styles.player}>
             <TeamLogo logoUrl={slot.team_logo_url} name={slot.team_name ?? '?'} />
@@ -50,7 +64,15 @@ export function SlotCard({
         )}
       </button>
 
-      {filled && (
+      {draft && (
+        <div className={styles.controls}>
+          <button type="button" className={styles.sell} onClick={onRemove}>
+            Remove
+          </button>
+        </div>
+      )}
+
+      {filled && saved && (
         <div className={styles.controls}>
           <button
             type="button"

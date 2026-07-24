@@ -33,6 +33,7 @@ const empty = (i: number): api.FantasySlot => ({
   booster_active: false,
 })
 
+// slot 1 already has a saved player (Ada); slots 2-4 are empty.
 const team: api.FantasyTeam = {
   balance: 46_000_000,
   boosters_available: 0,
@@ -57,8 +58,18 @@ const team: api.FantasyTeam = {
 
 const players: api.Player[] = [
   { id: 7, name: 'Ada', team_id: 2, team_name: 'Paddlers', team_logo_url: null, price: 20_000_000 },
-  { id: 8, name: 'Finn', team_id: 2, team_name: 'Paddlers', team_logo_url: null, price: 20_000_000 },
+  { id: 8, name: 'Finn', team_id: 2, team_name: 'Paddlers', team_logo_url: null, price: 10_000_000 },
+  { id: 9, name: 'Guro', team_id: 2, team_name: 'Paddlers', team_logo_url: null, price: 10_000_000 },
+  { id: 10, name: 'Ivar', team_id: 2, team_name: 'Paddlers', team_logo_url: null, price: 10_000_000 },
 ]
+
+// Pick a player into an (empty) slot via the picker. Staging only — no server call.
+async function pickInto(slotIndex: number, playerName: RegExp) {
+  const slot = screen.getByTestId(`slot-${slotIndex}`)
+  fireEvent.click(within(slot).getByRole('button'))
+  await screen.findByRole('dialog')
+  fireEvent.click(await screen.findByRole('button', { name: playerName }))
+}
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -93,20 +104,60 @@ describe('FantasyTeam', () => {
     expect(await screen.findByRole('dialog')).toBeInTheDocument()
   })
 
-  it('buys a player when picked', async () => {
+  it('staging a pick does NOT spend money (no assignSlot yet)', async () => {
     render(<FantasyTeam />)
-    const slot2 = await screen.findByTestId('slot-2')
-    fireEvent.click(within(slot2).getByRole('button'))
-    await screen.findByRole('dialog')
-    fireEvent.click(await screen.findByRole('button', { name: /Finn/i }))
-    await waitFor(() => expect(api.assignSlot).toHaveBeenCalledWith(2, 8))
+    await screen.findByTestId('slot-2')
+    await pickInto(2, /Finn/i)
+    // The slot now shows the pick as unsaved, and nothing was bought.
+    const slot2 = screen.getByTestId('slot-2')
+    expect(within(slot2).getByText('Finn')).toBeInTheDocument()
+    expect(within(slot2).getByText(/unsaved/i)).toBeInTheDocument()
+    expect(api.assignSlot).not.toHaveBeenCalled()
   })
 
-  it('sells the player from the card', async () => {
+  it('the Save button only appears once all four slots are filled', async () => {
+    render(<FantasyTeam />)
+    await screen.findByTestId('slot-2')
+    await pickInto(2, /Finn/i)
+    // slots 3 and 4 still empty → no Save yet
+    expect(screen.queryByRole('button', { name: /save team/i })).toBeNull()
+    await pickInto(3, /Guro/i)
+    await pickInto(4, /Ivar/i)
+    expect(await screen.findByRole('button', { name: /save team/i })).toBeInTheDocument()
+  })
+
+  it('commits every draft pick when Save is pressed', async () => {
+    render(<FantasyTeam />)
+    await screen.findByTestId('slot-2')
+    await pickInto(2, /Finn/i)
+    await pickInto(3, /Guro/i)
+    await pickInto(4, /Ivar/i)
+    fireEvent.click(await screen.findByRole('button', { name: /save team/i }))
+    await waitFor(() => expect(api.assignSlot).toHaveBeenCalledWith(2, 8))
+    expect(api.assignSlot).toHaveBeenCalledWith(3, 9)
+    expect(api.assignSlot).toHaveBeenCalledWith(4, 10)
+  })
+
+  it('asks for confirmation before selling, and only sells on confirm', async () => {
     render(<FantasyTeam />)
     const slot1 = await screen.findByTestId('slot-1')
-    fireEvent.click(within(slot1).getByRole('button', { name: /sell/i }))
+    fireEvent.click(within(slot1).getByRole('button', { name: /^sell$/i }))
+    // A Norwegian confirmation modal appears; nothing sold yet.
+    expect(await screen.findByText(/er du sikker på at du vil selge ada\?/i)).toBeInTheDocument()
+    expect(api.clearSlot).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: /^selg$/i }))
     await waitFor(() => expect(api.clearSlot).toHaveBeenCalledWith(1))
+  })
+
+  it('cancelling the sell modal does not sell', async () => {
+    render(<FantasyTeam />)
+    const slot1 = await screen.findByTestId('slot-1')
+    fireEvent.click(within(slot1).getByRole('button', { name: /^sell$/i }))
+    fireEvent.click(await screen.findByRole('button', { name: /avbryt/i }))
+    await waitFor(() =>
+      expect(screen.queryByText(/er du sikker/i)).toBeNull(),
+    )
+    expect(api.clearSlot).not.toHaveBeenCalled()
   })
 
   it('gives the Golden Racket to a player', async () => {
@@ -124,11 +175,12 @@ describe('FantasyTeam', () => {
     await waitFor(() => expect(api.buyBooster).toHaveBeenCalled())
   })
 
-  it('shows an error when an action is rejected', async () => {
+  it('shows an error when selling is rejected', async () => {
     vi.mocked(api.clearSlot).mockRejectedValue(new api.ApiError(409, 'Not enough CompuBucks'))
     render(<FantasyTeam />)
     const slot1 = await screen.findByTestId('slot-1')
-    fireEvent.click(within(slot1).getByRole('button', { name: /sell/i }))
+    fireEvent.click(within(slot1).getByRole('button', { name: /^sell$/i }))
+    fireEvent.click(await screen.findByRole('button', { name: /^selg$/i }))
     expect(await screen.findByRole('alert')).toHaveTextContent(/not enough compubucks/i)
   })
 })
