@@ -21,10 +21,13 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.auth import make_fantasy_token, read_bearer_token, verify_fantasy_token
 from app.db import get_db
+from app.events import record_purchase, record_sale
 from app.fantasy import sell_value
-from app.models import FantasySlot, FantasyUser, Member
+from app.models import FantasyEvent, FantasySlot, FantasyUser, Member
 from app.schemas import (
     FantasyAuthOut,
+    FantasyEventOut,
+    FantasyEventsResponse,
     FantasyLoginRequest,
     FantasyRegisterRequest,
     FantasySlotOut,
@@ -204,6 +207,31 @@ def get_team(
     return _serialize_team(db, user)
 
 
+# --- Event log (feature 009) -----------------------------------------------------
+
+@router.get("/events", response_model=FantasyEventsResponse)
+def list_events(
+    user: FantasyUser = Depends(require_fantasy_user), db: Session = Depends(get_db)
+) -> FantasyEventsResponse:
+    """This manager's CompuBucks events, newest first (purchase/sale/win/loss)."""
+    rows = db.scalars(
+        select(FantasyEvent)
+        .where(FantasyEvent.user_id == user.id)
+        .order_by(FantasyEvent.created_at.desc(), FantasyEvent.id.desc())
+    ).all()
+    return FantasyEventsResponse(
+        events=[
+            FantasyEventOut(
+                kind=e.kind,
+                member_name=e.member_name,
+                amount=e.amount,
+                created_at=e.created_at,
+            )
+            for e in rows
+        ]
+    )
+
+
 # --- Buy / sell players (economy, feature 008) -----------------------------------
 
 @router.put("/team/slots/{slot_index}", response_model=FantasyTeamOut)
@@ -264,12 +292,16 @@ def assign_slot(
         )
         db.add(slot)
     else:
+        # A swap sells the old player first — log that sale, then the new purchase.
+        old_member = db.get(Member, slot.member_id)
+        record_sale(db, user.id, old_member.name if old_member else "Ukjent", refund)
         # A fresh purchase resets the slot: new player, new clock, no racket/booster.
         slot.member_id = member.id
         slot.price_paid = member.price
         slot.added_at = _now()
         slot.has_racket = False
         slot.booster_active = False
+    record_purchase(db, user.id, member.name, member.price)
     db.commit()
     return _serialize_team(db, user)
 
@@ -287,7 +319,10 @@ def clear_slot(
     _validate_slot_index(slot_index)
     slot = _get_slot(db, user, slot_index)
     if slot is not None:
-        user.balance += sell_value(slot.price_paid)
+        refund = sell_value(slot.price_paid)
+        user.balance += refund
+        member = db.get(Member, slot.member_id)
+        record_sale(db, user.id, member.name if member else "Ukjent", refund)
         db.delete(slot)
         db.commit()
     return _serialize_team(db, user)

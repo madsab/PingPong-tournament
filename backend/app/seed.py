@@ -18,6 +18,7 @@ from datetime import datetime
 from sqlalchemy import select
 
 from app.db import SessionLocal
+from app.events import record_purchase
 from app.models import (
     FantasySlot,
     FantasyUser,
@@ -145,6 +146,13 @@ def seed() -> None:
             for i, m in enumerate(picks)
         ]
         db.add(demo)
+        db.commit()
+
+        # Log the demo manager's purchases so the event log (feature 009) isn't empty.
+        # (The seed builds the slots directly, so we record the buys explicitly here;
+        # the win/loss events come for free from settle_match below.)
+        for m in picks:
+            record_purchase(db, demo.id, m.name, m.price)
         db.commit()
 
         # Realize the seeded matches' CompuBucks into the demo manager's balance, the

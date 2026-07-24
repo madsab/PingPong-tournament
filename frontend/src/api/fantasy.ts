@@ -88,6 +88,15 @@ export interface Player {
   price: number | null // CompuBucks price; null = not for sale
 }
 
+// One entry in the manager's CompuBucks event log (feature 009). `amount` is signed:
+// purchase/loss negative, sale/win positive.
+export interface FantasyEvent {
+  kind: 'purchase' | 'sale' | 'win' | 'loss'
+  member_name: string
+  amount: number
+  created_at: string
+}
+
 // --- Auth & identity (US1) -------------------------------------------------------
 
 // Auth response also carries the token we store for later calls.
@@ -140,6 +149,13 @@ export function clearSlot(slotIndex: number): Promise<FantasyTeam> {
 export async function fetchMembers(): Promise<Player[]> {
   const data = await request<{ members: Player[] }>('/api/members')
   return data.members
+}
+
+// --- Event log (feature 009) -----------------------------------------------------
+
+export async function fetchEvents(): Promise<FantasyEvent[]> {
+  const data = await request<{ events: FantasyEvent[] }>('/api/fantasy/events')
+  return data.events
 }
 
 // --- Golden Racket (US4) ---------------------------------------------------------

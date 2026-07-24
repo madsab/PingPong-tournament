@@ -1,0 +1,81 @@
+.log {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  border-radius: var(--radius);
+  background: var(--color-char);
+  border: 1px solid var(--color-hairline);
+}
+
+.heading {
+  margin: 0 0 0.75rem;
+  font-size: 1.1rem;
+  color: var(--color-text);
+}
+
+.empty {
+  margin: 0;
+  color: var(--color-ash);
+  font-size: 0.9rem;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--color-hairline);
+}
+
+.row:last-child {
+  border-bottom: none;
+}
+
+.icon {
+  flex: 0 0 auto;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.what {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.text {
+  color: var(--color-text);
+  font-size: 0.92rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.time {
+  color: var(--color-ash);
+  font-size: 0.75rem;
+}
+
+.amount {
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--fw-label);
+}
+
+.gain {
+  color: var(--color-flame);
+}
+
+.spend {
+  color: var(--color-ash);
+}

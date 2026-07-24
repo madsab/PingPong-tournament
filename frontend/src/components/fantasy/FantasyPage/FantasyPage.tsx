@@ -1,7 +1,15 @@
-import { useEffect, useState } from 'react'
-import { ApiError, getMe, logout, type FantasyUser } from '../../../api/fantasy'
+import { useCallback, useEffect, useState } from 'react'
+import {
+  ApiError,
+  fetchEvents,
+  getMe,
+  logout,
+  type FantasyEvent,
+  type FantasyUser,
+} from '../../../api/fantasy'
 import { FantasyLogin } from '../FantasyLogin/FantasyLogin'
 import { FantasyTeam } from '../FantasyTeam/FantasyTeam'
+import { FantasyLog } from '../FantasyLog/FantasyLog'
 import { FantasyRules } from '../FantasyRules/FantasyRules'
 import styles from './FantasyPage.module.css'
 
@@ -9,6 +17,7 @@ import styles from './FantasyPage.module.css'
 // stored token is valid we go straight to the team, otherwise we show the login.
 export function FantasyPage() {
   const [user, setUser] = useState<FantasyUser | null | undefined>(undefined)
+  const [events, setEvents] = useState<FantasyEvent[]>([])
 
   useEffect(() => {
     let active = true
@@ -25,6 +34,18 @@ export function FantasyPage() {
       active = false
     }
   }, [])
+
+  // The event log (feature 009). Reloaded whenever the team changes so buys/sells
+  // and settled results show up right away.
+  const loadEvents = useCallback(() => {
+    fetchEvents()
+      .then(setEvents)
+      .catch(() => setEvents([]))
+  }, [])
+
+  useEffect(() => {
+    if (user) loadEvents()
+  }, [user, loadEvents])
 
   if (user === undefined) return <p className={styles.notice}>Loading…</p>
   if (user === null) return <FantasyLogin onLoggedIn={setUser} />
@@ -48,7 +69,8 @@ export function FantasyPage() {
       </header>
 
       <FantasyRules />
-      <FantasyTeam />
+      <FantasyTeam onChange={loadEvents} />
+      <FantasyLog events={events} />
     </div>
   )
 }

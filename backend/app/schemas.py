@@ -4,6 +4,8 @@ These are what the frontend receives as JSON. They are separate from the ORM mod
 so the API shape and the database shape can change independently.
 """
 
+from datetime import datetime
+
 from pydantic import BaseModel, field_validator
 
 
@@ -311,3 +313,16 @@ class PlayerOut(BaseModel):
 
 class MembersResponse(BaseModel):
     members: list[PlayerOut]
+
+
+class FantasyEventOut(BaseModel):
+    """One entry in a manager's CompuBucks event log (feature 009)."""
+
+    kind: str  # purchase | sale | win | loss
+    member_name: str
+    amount: int  # signed: purchase/loss negative, sale/win positive
+    created_at: datetime
+
+
+class FantasyEventsResponse(BaseModel):
+    events: list[FantasyEventOut]  # newest first

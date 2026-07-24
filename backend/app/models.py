@@ -15,6 +15,7 @@ from sqlalchemy import (
     DateTime,
     Enum,
     ForeignKey,
+    Index,
     Integer,
     String,
     UniqueConstraint,
@@ -233,4 +234,36 @@ class FantasySettlement(Base):
     applied_delta: Mapped[int] = mapped_column(Integer, nullable=False)
     consumed_booster_slot_index: Mapped[int | None] = mapped_column(
         Integer, nullable=True
+    )
+
+
+class FantasyEvent(Base):
+    """One thing that moved a fantasy user's CompuBucks (feature 009).
+
+    An append-only log: ``purchase`` / ``sale`` / ``win`` / ``loss``. Purchases and
+    sales are written when the buy/sell endpoint runs; win/loss are written per game
+    during match settlement. ``member_name`` is stored denormalized so an entry stays
+    readable after a player is deleted. ``match_id`` (win/loss only) lets settlement
+    delete-and-rewrite a match's events when the admin re-records a result, so the
+    same game is never counted twice. ``amount`` is signed: purchase/loss negative,
+    sale/win positive.
+    """
+
+    __tablename__ = "fantasy_events"
+    __table_args__ = (
+        Index("ix_fantasy_events_user_created", "user_id", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("fantasy_users.id", ondelete="CASCADE"), nullable=False
+    )
+    kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    member_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    amount: Mapped[int] = mapped_column(Integer, nullable=False)
+    match_id: Mapped[int | None] = mapped_column(
+        ForeignKey("matches.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), nullable=False
     )

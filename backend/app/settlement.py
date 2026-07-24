@@ -18,8 +18,9 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from app.fantasy import clamp0, slot_match_delta
-from app.models import FantasySettlement, FantasySlot
+from app.events import clear_match_results, record_game_results
+from app.fantasy import clamp0, slot_game_events
+from app.models import FantasySettlement, FantasySlot, Member
 
 
 def settle_match(db: Session, match) -> None:
@@ -41,7 +42,7 @@ def settle_match(db: Session, match) -> None:
         slots = db.scalars(
             select(FantasySlot)
             .where(FantasySlot.member_id.in_(member_ids))
-            .options(selectinload(FantasySlot.user))
+            .options(selectinload(FantasySlot.user), selectinload(FantasySlot.member))
         ).all()
         for slot in slots:
             slots_by_user.setdefault(slot.user_id, []).append(slot)
@@ -73,18 +74,27 @@ def settle_match(db: Session, match) -> None:
             # (user_id, match_id) row is gone before we re-add it.
             db.flush()
 
+        # Drop this match's previously-logged win/loss events for the user, so a
+        # re-record rewrites them instead of piling up duplicates (feature 009).
+        clear_match_results(db, user_id, match.id)
+
         if user is None:
             continue
 
-        # Compute the fresh effect from the user's current eligible slots.
+        # Compute the fresh effect from the user's current eligible slots, logging one
+        # win/loss event per game the player played (feature 009).
         before = user.balance
         delta = 0
         consumed_slot_index: int | None = None
         for slot in eligible:
             if not _eligible(slot, match):
                 continue
-            slot_delta, booster_consumed = slot_match_delta(slot, games)
-            delta += slot_delta
+            game_events, booster_consumed = slot_game_events(slot, games)
+            delta += sum(e["amount"] for e in game_events)
+            if game_events:
+                member = slot.member or db.get(Member, slot.member_id)
+                name = member.name if member else "Ukjent"
+                record_game_results(db, user_id, match.id, name, game_events)
             if booster_consumed:
                 slot.booster_active = False
                 consumed_slot_index = slot.slot_index

@@ -193,6 +193,15 @@ describe('FantasyTeam', () => {
     await waitFor(() => expect(api.clearSlot).toHaveBeenCalledWith(1))
   })
 
+  it('shows the refund amount in the sell confirmation modal', async () => {
+    render(<FantasyTeam />)
+    const slot1 = await screen.findByTestId('slot-1')
+    fireEvent.click(within(slot1).getByRole('button', { name: /^sell$/i }))
+    // Ada was bought for 20M → 85% refund = 17M, shown before confirming.
+    const dialog = await screen.findByRole('dialog')
+    expect(within(dialog).getByText(/17M/i)).toBeInTheDocument()
+  })
+
   it('cancelling the sell modal does not sell', async () => {
     render(<FantasyTeam />)
     const slot1 = await screen.findByTestId('slot-1')

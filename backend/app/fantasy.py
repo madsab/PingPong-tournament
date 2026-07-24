@@ -57,28 +57,31 @@ def _member_won(game, member_id: int) -> bool:
     return False
 
 
-def slot_match_delta(slot, games) -> tuple[int, bool]:
-    """CompuBucks a single slot earns/loses from one match, and whether its Booster
-    was consumed.
+def slot_game_events(slot, games) -> tuple[list[dict], bool]:
+    """Per-game win/loss amounts for one slot in one match, and whether its Booster
+    was consumed (feature 009).
 
-    ``games`` is the match's games (in order). Returns ``(delta, booster_consumed)``.
-    The caller (``settlement.py``) has already checked this slot's player is eligible
-    for this match (bought before the match completed).
+    Returns ``([{"won": bool, "amount": int}, ...], booster_consumed)`` — one entry
+    per game the player actually played, in order, with the racket/booster effect
+    already baked into ``amount``. This is the single source of truth for the money
+    math: ``slot_match_delta`` is just the sum of these amounts. The caller
+    (``settlement.py``) has already checked this slot's player is eligible for this
+    match (bought before the match completed).
     """
     member_id = slot.member_id
     played = [g for g in games if _member_played(g, member_id)]
     if not played:
         # Player didn't feature in this match — nothing happens, Booster waits.
-        return 0, False
+        return [], False
 
     multiplier = RACKET_MULTIPLIER if slot.has_racket else 1
 
-    delta = 0
+    events: list[dict] = []
     for g in played:
         if _member_won(g, member_id):
-            delta += WIN_REWARD * multiplier
+            events.append({"won": True, "amount": WIN_REWARD * multiplier})
         else:
-            delta -= LOSS_PENALTY * multiplier
+            events.append({"won": False, "amount": -LOSS_PENALTY * multiplier})
 
     booster_consumed = False
     if slot.booster_active:
@@ -86,6 +89,15 @@ def slot_match_delta(slot, games) -> tuple[int, bool]:
         # and does not stack with the racket (FR-021/FR-022). It is then used up.
         booster_consumed = True
         if not slot.has_racket and _member_won(played[0], member_id):
-            delta += BOOSTER_BONUS_AMOUNT
+            events[0]["amount"] += BOOSTER_BONUS_AMOUNT
 
-    return delta, booster_consumed
+    return events, booster_consumed
+
+
+def slot_match_delta(slot, games) -> tuple[int, bool]:
+    """CompuBucks a single slot earns/loses from one match, and whether its Booster
+    was consumed. The net of ``slot_game_events`` — kept so the banked-balance math
+    in ``settlement.py`` is unchanged.
+    """
+    events, booster_consumed = slot_game_events(slot, games)
+    return sum(e["amount"] for e in events), booster_consumed

@@ -44,6 +44,8 @@ const draftToSlot = (index: number, player: Player): FantasySlot => ({
   booster_active: false,
 })
 
+const compact = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 })
+
 // The fantasy squad laid out like a doubles match: two players on the left, a
 // ping-pong table in the middle, two on the right (stacks on mobile).
 //
@@ -55,7 +57,10 @@ const draftToSlot = (index: number, player: Player): FantasySlot => ({
 //  - Selling is immediate and asks for confirmation first (shows the refund).
 //  - Golden Racket / Booster are optimistic: the icon shows instantly, the call
 //    runs in the background, and a failure removes the icon with a message.
-export function FantasyTeam() {
+//
+// `onChange` is called after any successful mutation so the parent can refresh the
+// event log (feature 009).
+export function FantasyTeam({ onChange }: { onChange?: () => void } = {}) {
   const [state, setState] = useState<LoadState>({ status: 'loading' })
   const [players, setPlayers] = useState<Player[]>([])
   const [openSlot, setOpenSlot] = useState<number | null>(null)
@@ -108,6 +113,7 @@ export function FantasyTeam() {
     try {
       const updated = await action()
       setState({ status: 'ready', team: updated })
+      onChange?.()
       return true
     } catch (err: unknown) {
       setError(err instanceof ApiError ? err.message : 'Something went wrong')
@@ -127,6 +133,7 @@ export function FantasyTeam() {
     try {
       const updated = await action()
       setState({ status: 'ready', team: updated })
+      onChange?.()
     } catch (err: unknown) {
       setError(err instanceof ApiError ? err.message : 'Something went wrong')
       loadTeam()
@@ -167,6 +174,7 @@ export function FantasyTeam() {
         latest = await assignSlot(index, player.id)
       }
       setState({ status: 'ready', team: latest })
+      onChange?.()
     } catch (err: unknown) {
       setError(err instanceof ApiError ? err.message : 'Something went wrong')
       loadTeam()
@@ -315,7 +323,9 @@ export function FantasyTeam() {
 
       {sellTarget !== null && (
         <ConfirmModal
-          message={`Er du sikker på at du vil selge ${sellTarget.member_name}?`}
+          message={`Er du sikker på at du vil selge ${sellTarget.member_name}? Du får ${compact.format(
+            refundOf(sellTarget.price_paid),
+          )} CompuBucks tilbake.`}
           confirmLabel="Selg"
           cancelLabel="Avbryt"
           onConfirm={confirmSell}
