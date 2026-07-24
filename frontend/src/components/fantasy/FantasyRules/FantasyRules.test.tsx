@@ -13,7 +13,7 @@ describe('FantasyRules', () => {
     expect(screen.getByText(/100 000 000 CompuBucks/)).toBeInTheDocument()
     expect(screen.getByText(/85 %/)).toBeInTheDocument()
     expect(screen.getByText(/\+5 000 000/)).toBeInTheDocument()
-    expect(screen.getByText(/gyllen racket/i)).toBeInTheDocument()
+    expect(screen.getByText(/golden racket/i)).toBeInTheDocument()
     expect(screen.getByText(/booster/i)).toBeInTheDocument()
   })
 })

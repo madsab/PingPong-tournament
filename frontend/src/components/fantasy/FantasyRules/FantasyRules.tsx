@@ -11,7 +11,8 @@ export function FantasyRules() {
           Du starter med <strong>100 000 000 CompuBucks</strong>.
         </li>
         <li>
-          Spillere koster penger — kjøp fire til laget ditt (bedre spillere
+          Spillere koster penger — kjøp opptil fire til laget ditt (du kan
+          lagre laget med så mange eller få spillere du vil; bedre spillere
           koster mer).
         </li>
         <li>

@@ -1,0 +1,115 @@
+/* The staged-changes "shopping cart" shown under the squad. */
+.cart {
+  margin-top: 1.25rem;
+  padding: 1rem;
+  border-radius: var(--radius);
+  background: var(--color-char);
+  border: 1px solid var(--color-hairline);
+}
+
+.title {
+  margin: 0 0 0.75rem;
+  font-size: 0.95rem;
+  font-weight: var(--fw-label);
+  color: var(--color-text);
+}
+
+.lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.line {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.9rem;
+  color: var(--color-text);
+}
+
+.action {
+  flex: 0 0 auto;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  background: var(--color-hairline);
+  color: var(--color-ash);
+}
+
+.who {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cost {
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+
+.gain {
+  color: var(--color-flame);
+}
+
+.remove {
+  flex: 0 0 auto;
+  width: 1.6rem;
+  height: 1.6rem;
+  line-height: 1;
+  font-size: 1.1rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-hairline);
+  background: transparent;
+  color: var(--color-ash);
+  cursor: pointer;
+}
+
+.remove:hover {
+  color: var(--color-text);
+  border-color: var(--color-ash);
+}
+
+.summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--color-hairline);
+}
+
+.preview {
+  color: var(--color-ash);
+  font-size: 0.9rem;
+}
+
+.save {
+  font: inherit;
+  font-weight: var(--fw-label);
+  padding: 0.55rem 1.4rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-flame);
+  background: var(--color-flame);
+  color: var(--color-ink);
+  cursor: pointer;
+}
+
+.save:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.save:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

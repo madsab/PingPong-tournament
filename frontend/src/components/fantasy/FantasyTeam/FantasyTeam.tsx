@@ -14,25 +14,20 @@ import {
   type FantasyTeam as FantasyTeamData,
   type Player,
 } from '../../../api/fantasy'
+import { cartTotals, netCost, projectTeam, refundOf } from '../../../lib/fantasyCart'
 import { SlotCard } from '../SlotCard/SlotCard'
 import { MemberPicker } from '../MemberPicker/MemberPicker'
 import { ConfirmModal } from '../ConfirmModal/ConfirmModal'
 import { PingPongTable } from '../PingPongTable/PingPongTable'
 import { CompuBucks } from '../CompuBucks/CompuBucks'
 import { Shop } from '../Shop/Shop'
+import { Cart, type CartLine } from '../Cart/Cart'
 import styles from './FantasyTeam.module.css'
 
 type LoadState =
   | { status: 'loading' }
   | { status: 'error'; message: string }
   | { status: 'ready'; team: FantasyTeamData }
-
-const SELL_RATE = 0.85
-
-// The refund you get back for selling a player you paid `pricePaid` for.
-const refundOf = (pricePaid: number) => Math.floor(pricePaid * SELL_RATE)
-
-const compact = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 })
 
 // Turn a picked Player into a slot-shaped object so SlotCard can render a draft
 // pick the same way it renders a saved one. `price_paid` here is what they WILL
@@ -52,16 +47,20 @@ const draftToSlot = (index: number, player: Player): FantasySlot => ({
 // The fantasy squad laid out like a doubles match: two players on the left, a
 // ping-pong table in the middle, two on the right (stacks on mobile).
 //
-// Picking players is now STAGED: choosing a player fills a slot as a draft (no
-// money moves). Once all four slots are filled the "Save team" button appears;
-// only then are the picks committed and CompuBucks deducted. Selling a saved
-// player is still instant, but asks for confirmation first.
+// Editing (feature 010):
+//  - Picking players is STAGED into a "shopping cart" (no money, no server call).
+//    You can save ANY number of players (0-4); the Save button shows whenever the
+//    cart has a change. Save is optimistic: the screen updates first, the buys are
+//    written in the background, and a failure reverts to the server's real state.
+//  - Selling is immediate and asks for confirmation first (shows the refund).
+//  - Golden Racket / Booster are optimistic: the icon shows instantly, the call
+//    runs in the background, and a failure removes the icon with a message.
 export function FantasyTeam() {
   const [state, setState] = useState<LoadState>({ status: 'loading' })
   const [players, setPlayers] = useState<Player[]>([])
   const [openSlot, setOpenSlot] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
-  // Locally-chosen players not yet bought, keyed by slot index.
+  // Locally-chosen players not yet bought, keyed by slot index (the cart).
   const [draft, setDraft] = useState<Map<number, Player>>(new Map())
   // The saved slot we're asking to sell (null = no modal open).
   const [sellTarget, setSellTarget] = useState<FantasySlot | null>(null)
@@ -91,9 +90,7 @@ export function FantasyTeam() {
     return map
   }, [team])
 
-  // A slot is "filled" if it has a saved player or a draft pick.
   const savedFilled = (i: number) => (savedByIndex.get(i)?.member_id ?? null) !== null
-  const isFilled = (i: number) => draft.has(i) || savedFilled(i)
 
   // Members already on the team (saved) or chosen in the draft — shown disabled in
   // the picker so nobody is picked twice.
@@ -104,22 +101,8 @@ export function FantasyTeam() {
     return ids
   }, [team, draft])
 
-  // Net cost of one draft pick: its price minus the refund from the saved player it
-  // replaces (empty slot = full price; a swap refunds 85% of the old one).
-  const netCost = useCallback(
-    (index: number, player: Player) =>
-      (player.price ?? 0) - refundOf(savedByIndex.get(index)?.price_paid ?? 0),
-    [savedByIndex],
-  )
-
-  // What committing every draft pick would cost, and what's left after.
-  const draftCost = useMemo(() => {
-    let sum = 0
-    for (const [i, p] of draft) sum += netCost(i, p)
-    return sum
-  }, [draft, netCost])
-
-  // Run an economy action, refresh from its response, and surface any error.
+  // One error-surfacing wrapper for the actions that stay synchronous (sell, shop
+  // buy): run the call, refresh from its response, show any error.
   async function run(action: () => Promise<FantasyTeamData>) {
     setError(null)
     try {
@@ -129,6 +112,24 @@ export function FantasyTeam() {
     } catch (err: unknown) {
       setError(err instanceof ApiError ? err.message : 'Something went wrong')
       return false
+    }
+  }
+
+  // Optimistic update for the power-ups: show the new slot state now, persist in
+  // the background, and revert to server truth (with a message) if it fails.
+  async function optimistic(
+    mutate: (slots: FantasySlot[]) => FantasySlot[],
+    action: () => Promise<FantasyTeamData>,
+  ) {
+    if (state.status !== 'ready') return
+    setError(null)
+    setState({ status: 'ready', team: { ...state.team, slots: mutate(state.team.slots) } })
+    try {
+      const updated = await action()
+      setState({ status: 'ready', team: updated })
+    } catch (err: unknown) {
+      setError(err instanceof ApiError ? err.message : 'Something went wrong')
+      loadTeam()
     }
   }
 
@@ -149,20 +150,23 @@ export function FantasyTeam() {
     })
   }
 
-  // Commit every draft pick by buying it into its slot, one call per slot (the
-  // backend has no batch endpoint). Since Save is only enabled when the whole
-  // draft is affordable, a mid-way failure is rare; if one happens we stop, show
-  // the message and refetch so the UI matches the server.
+  // Commit the cart optimistically: show the projected team, empty the cart, then
+  // buy each pick into its slot in the background (one call per slot — the backend
+  // has no batch endpoint). On any failure, refetch so the UI matches the server.
   async function saveTeam() {
+    if (state.status !== 'ready') return
+    const server = state.team
+    const picks = [...draft]
     setError(null)
+    setState({ status: 'ready', team: projectTeam(server, draft) })
+    setDraft(new Map())
     setSaving(true)
     try {
-      let latest: FantasyTeamData | null = null
-      for (const [index, player] of draft) {
+      let latest = server
+      for (const [index, player] of picks) {
         latest = await assignSlot(index, player.id)
       }
-      if (latest) setState({ status: 'ready', team: latest })
-      setDraft(new Map())
+      setState({ status: 'ready', team: latest })
     } catch (err: unknown) {
       setError(err instanceof ApiError ? err.message : 'Something went wrong')
       loadTeam()
@@ -179,28 +183,46 @@ export function FantasyTeam() {
   }
 
   function toggleRacket(slot: FantasySlot) {
-    run(() => (slot.has_racket ? clearRacket() : setRacket(slot.slot_index)))
+    const turningOn = !slot.has_racket
+    optimistic(
+      (slots) => slots.map((s) => ({ ...s, has_racket: turningOn && s.slot_index === slot.slot_index })),
+      () => (slot.has_racket ? clearRacket() : setRacket(slot.slot_index)),
+    )
   }
 
   function toggleBooster(slot: FantasySlot) {
-    run(() => (slot.booster_active ? removeBooster() : placeBooster(slot.slot_index)))
+    const turningOn = !slot.booster_active
+    optimistic(
+      (slots) =>
+        slots.map((s) =>
+          s.slot_index === slot.slot_index ? { ...s, booster_active: turningOn } : s,
+        ),
+      () => (slot.booster_active ? removeBooster() : placeBooster(slot.slot_index)),
+    )
   }
 
   if (state.status === 'loading') return <p className={styles.notice}>Loading your team…</p>
   if (state.status === 'error')
     return <p className={styles.notice}>Couldn&rsquo;t load your team. Please refresh.</p>
 
-  const allFilled = [1, 2, 3, 4].every(isFilled)
-  const hasDraft = draft.size > 0
-  const remaining = state.team.balance - draftCost
-  const canSave = allFilled && hasDraft && remaining >= 0
+  const totals = cartTotals(state.team, draft)
+
+  // The cart lines, ordered by slot for a stable display.
+  const cartLines: CartLine[] = [...draft]
+    .map(([slotIndex, player]) => ({
+      slotIndex,
+      playerName: player.name,
+      netCost: netCost(player, savedByIndex.get(slotIndex)),
+      isSwap: savedFilled(slotIndex),
+    }))
+    .sort((a, b) => a.slotIndex - b.slotIndex)
 
   // What the user can spend on the open slot: balance, minus committing the OTHER
   // draft picks, plus the refund from selling whoever is saved in this slot.
   let spendable = state.team.balance
   if (openSlot !== null) {
     let otherDraftCost = 0
-    for (const [i, p] of draft) if (i !== openSlot) otherDraftCost += netCost(i, p)
+    for (const [i, p] of draft) if (i !== openSlot) otherDraftCost += netCost(p, savedByIndex.get(i))
     spendable =
       state.team.balance - otherDraftCost + refundOf(savedByIndex.get(openSlot)?.price_paid ?? 0)
   }
@@ -262,23 +284,16 @@ export function FantasyTeam() {
         </div>
       </div>
 
-      {allFilled && hasDraft && (
-        <div className={styles.saveBar}>
-          <span className={styles.savePreview}>
-            {remaining >= 0
-              ? `Costs ${compact.format(draftCost)} · ${compact.format(remaining)} left`
-              : `Over budget by ${compact.format(-remaining)}`}
-          </span>
-          <button
-            type="button"
-            className={styles.save}
-            disabled={!canSave || saving}
-            onClick={saveTeam}
-          >
-            {saving ? 'Saving…' : 'Save team'}
-          </button>
-        </div>
-      )}
+      <Cart
+        lines={cartLines}
+        total={totals.total}
+        remaining={totals.remaining}
+        overBudget={totals.overBudget}
+        canSave={totals.canSave}
+        saving={saving}
+        onRemoveLine={discardDraft}
+        onSave={saveTeam}
+      />
 
       <Shop
         boosterPrice={state.team.booster_price}

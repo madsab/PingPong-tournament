@@ -12,9 +12,9 @@ describe('RulesBanner', () => {
 
   it('shows all six rules', () => {
     render(<RulesBanner />)
-    expect(screen.getByText(/først til 11 poeng vinner matchen/i)).toBeInTheDocument()
+    expect(screen.getByText(/førstemann til 11 poeng/i)).toBeInTheDocument()
     expect(screen.getByText(/vinner flest delkamper, vinner hele kampen/i)).toBeInTheDocument()
-    expect(screen.getByText(/første ballen spilles for å avgjøre hvem som får serven/i)).toBeInTheDocument()
+    expect(screen.getByText(/første ballen om serve/i)).toBeInTheDocument()
     expect(screen.getByText(/bak bakkanten av bordet/i)).toBeInTheDocument()
     expect(screen.getByText(/world cup-racketen \(fairplay\)/i)).toBeInTheDocument()
     expect(

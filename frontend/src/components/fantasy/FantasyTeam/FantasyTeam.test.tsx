@@ -115,15 +115,59 @@ describe('FantasyTeam', () => {
     expect(api.assignSlot).not.toHaveBeenCalled()
   })
 
-  it('the Save button only appears once all four slots are filled', async () => {
+  it('shows the Save button as soon as something changes, and hides it when reverted', async () => {
+    render(<FantasyTeam />)
+    await screen.findByTestId('slot-2')
+    // nothing staged yet → no Save
+    expect(screen.queryByRole('button', { name: /save team/i })).toBeNull()
+    await pickInto(2, /Finn/i)
+    // one pending pick is enough — no need to fill all four
+    expect(await screen.findByRole('button', { name: /save team/i })).toBeInTheDocument()
+    // remove the only pending pick → Save disappears again
+    const slot2 = screen.getByTestId('slot-2')
+    fireEvent.click(within(slot2).getByRole('button', { name: /^remove$/i }))
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: /save team/i })).toBeNull(),
+    )
+  })
+
+  it('saves a partial team of fewer than four players', async () => {
     render(<FantasyTeam />)
     await screen.findByTestId('slot-2')
     await pickInto(2, /Finn/i)
-    // slots 3 and 4 still empty → no Save yet
-    expect(screen.queryByRole('button', { name: /save team/i })).toBeNull()
-    await pickInto(3, /Guro/i)
-    await pickInto(4, /Ivar/i)
-    expect(await screen.findByRole('button', { name: /save team/i })).toBeInTheDocument()
+    fireEvent.click(await screen.findByRole('button', { name: /save team/i }))
+    await waitFor(() => expect(api.assignSlot).toHaveBeenCalledWith(2, 8))
+    expect(api.assignSlot).toHaveBeenCalledTimes(1)
+  })
+
+  it('renders the saved result immediately and clears the cart on Save', async () => {
+    let resolve!: (t: api.FantasyTeam) => void
+    vi.mocked(api.assignSlot).mockReturnValue(
+      new Promise<api.FantasyTeam>((r) => (resolve = r)),
+    )
+    render(<FantasyTeam />)
+    await screen.findByTestId('slot-2')
+    await pickInto(2, /Finn/i)
+    fireEvent.click(await screen.findByRole('button', { name: /save team/i }))
+    // Before the call resolves: the cart is gone and slot 2 shows Finn as saved.
+    await waitFor(() => expect(screen.queryByTestId('cart')).toBeNull())
+    const slot2 = screen.getByTestId('slot-2')
+    expect(within(slot2).getByText('Finn')).toBeInTheDocument()
+    expect(within(slot2).queryByText(/unsaved/i)).toBeNull()
+    resolve(team)
+  })
+
+  it('reverts and shows a message when Save fails', async () => {
+    vi.mocked(api.assignSlot).mockRejectedValue(
+      new api.ApiError(409, 'Not enough CompuBucks'),
+    )
+    render(<FantasyTeam />)
+    await screen.findByTestId('slot-2')
+    await pickInto(2, /Finn/i)
+    fireEvent.click(await screen.findByRole('button', { name: /save team/i }))
+    expect(await screen.findByRole('alert')).toHaveTextContent(/not enough compubucks/i)
+    // re-fetched server truth after the failure (initial load + revert)
+    await waitFor(() => expect(api.fetchTeam).toHaveBeenCalledTimes(2))
   })
 
   it('commits every draft pick when Save is pressed', async () => {
@@ -165,6 +209,29 @@ describe('FantasyTeam', () => {
     const slot1 = await screen.findByTestId('slot-1')
     fireEvent.click(within(slot1).getByRole('button', { name: /racket/i }))
     await waitFor(() => expect(api.setRacket).toHaveBeenCalledWith(1))
+  })
+
+  it('shows the Golden Racket icon immediately, before the server responds', async () => {
+    vi.mocked(api.setRacket).mockReturnValue(new Promise<api.FantasyTeam>(() => {}))
+    render(<FantasyTeam />)
+    const slot1 = await screen.findByTestId('slot-1')
+    fireEvent.click(within(slot1).getByRole('button', { name: /racket/i }))
+    // The corner badge appears right away, without waiting for the call.
+    expect(within(slot1).getByLabelText(/golden racket/i)).toBeInTheDocument()
+  })
+
+  it('removes the power-up icon and shows a message when its background save fails', async () => {
+    vi.mocked(api.setRacket).mockRejectedValue(new api.ApiError(500, 'Server error'))
+    render(<FantasyTeam />)
+    const slot1 = await screen.findByTestId('slot-1')
+    fireEvent.click(within(slot1).getByRole('button', { name: /racket/i }))
+    expect(await screen.findByRole('alert')).toHaveTextContent(/server error/i)
+    // reverted to server truth (no racket)
+    await waitFor(() =>
+      expect(
+        within(screen.getByTestId('slot-1')).queryByLabelText(/golden racket/i),
+      ).toBeNull(),
+    )
   })
 
   it('buys a Booster from the shop', async () => {
