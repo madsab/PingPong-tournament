@@ -1,8 +1,9 @@
-import styles from './ConfirmModal.module.css'
+import type { ReactNode } from "react"
+import styles from "./ConfirmModal.module.css"
 
 interface ConfirmModalProps {
   // The question to show (e.g. "Er du sikker på at du vil selge Ada?").
-  message: string
+  message: string | ReactNode
   // Labels for the two buttons — kept as props so this modal stays generic.
   confirmLabel: string
   cancelLabel: string
@@ -20,7 +21,7 @@ export function ConfirmModal({
   onCancel,
 }: ConfirmModalProps) {
   return (
-    <div className={styles.overlay} role="dialog" aria-modal="true" aria-label={message}>
+    <div className={styles.overlay} role="dialog" aria-modal="true">
       <div className={styles.panel}>
         <p className={styles.message}>{message}</p>
         <div className={styles.actions}>

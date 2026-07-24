@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from "react"
 import {
   ApiError,
   assignSlot,
@@ -13,21 +13,27 @@ import {
   type FantasySlot,
   type FantasyTeam as FantasyTeamData,
   type Player,
-} from '../../../api/fantasy'
-import { cartTotals, netCost, projectTeam, refundOf } from '../../../lib/fantasyCart'
-import { SlotCard } from '../SlotCard/SlotCard'
-import { MemberPicker } from '../MemberPicker/MemberPicker'
-import { ConfirmModal } from '../ConfirmModal/ConfirmModal'
-import { PingPongTable } from '../PingPongTable/PingPongTable'
-import { CompuBucks } from '../CompuBucks/CompuBucks'
-import { Shop } from '../Shop/Shop'
-import { Cart, type CartLine } from '../Cart/Cart'
-import styles from './FantasyTeam.module.css'
+} from "../../../api/fantasy"
+import {
+  cartTotals,
+  netCost,
+  projectTeam,
+  refundOf,
+} from "../../../lib/fantasyCart"
+import { SlotCard } from "../SlotCard/SlotCard"
+import { MemberPicker } from "../MemberPicker/MemberPicker"
+import { ConfirmModal } from "../ConfirmModal/ConfirmModal"
+import { PingPongTable } from "../PingPongTable/PingPongTable"
+import { CompuBucks } from "../CompuBucks/CompuBucks"
+import { Shop } from "../Shop/Shop"
+import { Cart, type CartLine } from "../Cart/Cart"
+import styles from "./FantasyTeam.module.css"
+import { CoinIcon } from "../../../assets/CoinIcon"
 
 type LoadState =
-  | { status: 'loading' }
-  | { status: 'error'; message: string }
-  | { status: 'ready'; team: FantasyTeamData }
+  | { status: "loading" }
+  | { status: "error"; message: string }
+  | { status: "ready"; team: FantasyTeamData }
 
 // Turn a picked Player into a slot-shaped object so SlotCard can render a draft
 // pick the same way it renders a saved one. `price_paid` here is what they WILL
@@ -44,7 +50,10 @@ const draftToSlot = (index: number, player: Player): FantasySlot => ({
   booster_active: false,
 })
 
-const compact = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 })
+const compact = new Intl.NumberFormat("en", {
+  notation: "compact",
+  maximumFractionDigits: 1,
+})
 
 // The fantasy squad laid out like a doubles match: two players on the left, a
 // ping-pong table in the middle, two on the right (stacks on mobile).
@@ -61,7 +70,7 @@ const compact = new Intl.NumberFormat('en', { notation: 'compact', maximumFracti
 // `onChange` is called after any successful mutation so the parent can refresh the
 // event log (feature 009).
 export function FantasyTeam({ onChange }: { onChange?: () => void } = {}) {
-  const [state, setState] = useState<LoadState>({ status: 'loading' })
+  const [state, setState] = useState<LoadState>({ status: "loading" })
   const [players, setPlayers] = useState<Player[]>([])
   const [openSlot, setOpenSlot] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -73,21 +82,23 @@ export function FantasyTeam({ onChange }: { onChange?: () => void } = {}) {
 
   const loadTeam = useCallback(() => {
     fetchTeam()
-      .then((team) => setState({ status: 'ready', team }))
+      .then((team) => setState({ status: "ready", team }))
       .catch((err: unknown) =>
         setState({
-          status: 'error',
-          message: err instanceof Error ? err.message : 'Something went wrong',
+          status: "error",
+          message: err instanceof Error ? err.message : "Something went wrong",
         }),
       )
   }, [])
 
   useEffect(() => {
     loadTeam()
-    fetchMembers().then(setPlayers).catch(() => setPlayers([]))
+    fetchMembers()
+      .then(setPlayers)
+      .catch(() => setPlayers([]))
   }, [loadTeam])
 
-  const team = state.status === 'ready' ? state.team : null
+  const team = state.status === "ready" ? state.team : null
 
   const savedByIndex = useMemo(() => {
     const map = new Map<number, FantasySlot>()
@@ -95,13 +106,15 @@ export function FantasyTeam({ onChange }: { onChange?: () => void } = {}) {
     return map
   }, [team])
 
-  const savedFilled = (i: number) => (savedByIndex.get(i)?.member_id ?? null) !== null
+  const savedFilled = (i: number) =>
+    (savedByIndex.get(i)?.member_id ?? null) !== null
 
   // Members already on the team (saved) or chosen in the draft — shown disabled in
   // the picker so nobody is picked twice.
   const takenMemberIds = useMemo(() => {
     const ids = new Set<number>()
-    for (const s of team?.slots ?? []) if (s.member_id !== null) ids.add(s.member_id)
+    for (const s of team?.slots ?? [])
+      if (s.member_id !== null) ids.add(s.member_id)
     for (const p of draft.values()) ids.add(p.id)
     return ids
   }, [team, draft])
@@ -112,11 +125,11 @@ export function FantasyTeam({ onChange }: { onChange?: () => void } = {}) {
     setError(null)
     try {
       const updated = await action()
-      setState({ status: 'ready', team: updated })
+      setState({ status: "ready", team: updated })
       onChange?.()
       return true
     } catch (err: unknown) {
-      setError(err instanceof ApiError ? err.message : 'Something went wrong')
+      setError(err instanceof ApiError ? err.message : "Something went wrong")
       return false
     }
   }
@@ -127,15 +140,18 @@ export function FantasyTeam({ onChange }: { onChange?: () => void } = {}) {
     mutate: (slots: FantasySlot[]) => FantasySlot[],
     action: () => Promise<FantasyTeamData>,
   ) {
-    if (state.status !== 'ready') return
+    if (state.status !== "ready") return
     setError(null)
-    setState({ status: 'ready', team: { ...state.team, slots: mutate(state.team.slots) } })
+    setState({
+      status: "ready",
+      team: { ...state.team, slots: mutate(state.team.slots) },
+    })
     try {
       const updated = await action()
-      setState({ status: 'ready', team: updated })
+      setState({ status: "ready", team: updated })
       onChange?.()
     } catch (err: unknown) {
-      setError(err instanceof ApiError ? err.message : 'Something went wrong')
+      setError(err instanceof ApiError ? err.message : "Something went wrong")
       loadTeam()
     }
   }
@@ -161,11 +177,11 @@ export function FantasyTeam({ onChange }: { onChange?: () => void } = {}) {
   // buy each pick into its slot in the background (one call per slot — the backend
   // has no batch endpoint). On any failure, refetch so the UI matches the server.
   async function saveTeam() {
-    if (state.status !== 'ready') return
+    if (state.status !== "ready") return
     const server = state.team
     const picks = [...draft]
     setError(null)
-    setState({ status: 'ready', team: projectTeam(server, draft) })
+    setState({ status: "ready", team: projectTeam(server, draft) })
     setDraft(new Map())
     setSaving(true)
     try {
@@ -173,10 +189,10 @@ export function FantasyTeam({ onChange }: { onChange?: () => void } = {}) {
       for (const [index, player] of picks) {
         latest = await assignSlot(index, player.id)
       }
-      setState({ status: 'ready', team: latest })
+      setState({ status: "ready", team: latest })
       onChange?.()
     } catch (err: unknown) {
-      setError(err instanceof ApiError ? err.message : 'Something went wrong')
+      setError(err instanceof ApiError ? err.message : "Something went wrong")
       loadTeam()
     } finally {
       setSaving(false)
@@ -193,7 +209,11 @@ export function FantasyTeam({ onChange }: { onChange?: () => void } = {}) {
   function toggleRacket(slot: FantasySlot) {
     const turningOn = !slot.has_racket
     optimistic(
-      (slots) => slots.map((s) => ({ ...s, has_racket: turningOn && s.slot_index === slot.slot_index })),
+      (slots) =>
+        slots.map((s) => ({
+          ...s,
+          has_racket: turningOn && s.slot_index === slot.slot_index,
+        })),
       () => (slot.has_racket ? clearRacket() : setRacket(slot.slot_index)),
     )
   }
@@ -203,15 +223,23 @@ export function FantasyTeam({ onChange }: { onChange?: () => void } = {}) {
     optimistic(
       (slots) =>
         slots.map((s) =>
-          s.slot_index === slot.slot_index ? { ...s, booster_active: turningOn } : s,
+          s.slot_index === slot.slot_index
+            ? { ...s, booster_active: turningOn }
+            : s,
         ),
-      () => (slot.booster_active ? removeBooster() : placeBooster(slot.slot_index)),
+      () =>
+        slot.booster_active ? removeBooster() : placeBooster(slot.slot_index),
     )
   }
 
-  if (state.status === 'loading') return <p className={styles.notice}>Loading your team…</p>
-  if (state.status === 'error')
-    return <p className={styles.notice}>Couldn&rsquo;t load your team. Please refresh.</p>
+  if (state.status === "loading")
+    return <p className={styles.notice}>Loading your team…</p>
+  if (state.status === "error")
+    return (
+      <p className={styles.notice}>
+        Couldn&rsquo;t load your team. Please refresh.
+      </p>
+    )
 
   const totals = cartTotals(state.team, draft)
 
@@ -230,9 +258,12 @@ export function FantasyTeam({ onChange }: { onChange?: () => void } = {}) {
   let spendable = state.team.balance
   if (openSlot !== null) {
     let otherDraftCost = 0
-    for (const [i, p] of draft) if (i !== openSlot) otherDraftCost += netCost(p, savedByIndex.get(i))
+    for (const [i, p] of draft)
+      if (i !== openSlot) otherDraftCost += netCost(p, savedByIndex.get(i))
     spendable =
-      state.team.balance - otherDraftCost + refundOf(savedByIndex.get(openSlot)?.price_paid ?? 0)
+      state.team.balance -
+      otherDraftCost +
+      refundOf(savedByIndex.get(openSlot)?.price_paid ?? 0)
   }
 
   const renderSlot = (index: number) => {
@@ -323,9 +354,21 @@ export function FantasyTeam({ onChange }: { onChange?: () => void } = {}) {
 
       {sellTarget !== null && (
         <ConfirmModal
-          message={`Er du sikker på at du vil selge ${sellTarget.member_name}? Du får ${compact.format(
-            refundOf(sellTarget.price_paid),
-          )} CompuBucks tilbake.`}
+          message={
+            <div>
+              <p>Er du sikker på at du vil selge {sellTarget.member_name}?</p>
+              <span
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                Du får {compact.format(refundOf(sellTarget.price_paid))}{" "}
+                <CoinIcon /> tilbake{" "}
+              </span>
+            </div>
+          }
           confirmLabel="Selg"
           cancelLabel="Avbryt"
           onConfirm={confirmSell}
